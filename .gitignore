@@ -1,6 +1,3 @@
-# Local-only documentation / design notes (per project preference, not pushed to remote)
-docs/
-
 # OS / editor
 .DS_Store
 *.swp

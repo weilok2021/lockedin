@@ -5,6 +5,5 @@ sql:
     schema: sql/schema
     gen:
       go:
-        package: db
-        out: internal/db
-        sql_package: pgx/v5
+        out: internal/database
+        sql_package: database/sql

@@ -9,17 +9,9 @@ import (
 )
 
 type Config struct {
-	Server   ServerConfig
-	Database DatabaseConfig
-}
-
-type ServerConfig struct {
 	Port        string
 	Environment string
-}
-
-type DatabaseConfig struct {
-	URL string
+	DbURL       string
 }
 
 func Load() (Config, error) {
@@ -27,10 +19,11 @@ func Load() (Config, error) {
 		log.Println("no .env file, using process env")
 	}
 	cfg := Config{
-		Server:   ServerConfig{Port: os.Getenv("PORT"), Environment: os.Getenv("ENV")},
-		Database: DatabaseConfig{URL: os.Getenv("DB_URL")},
+		Port:        os.Getenv("PORT"),
+		Environment: os.Getenv("ENV"),
+		DbURL:       os.Getenv("DB_URL"),
 	}
-	if cfg.Database.URL == "" {
+	if cfg.DbURL == "" {
 		return cfg, errors.New("DB_URL required")
 	}
 	return cfg, nil

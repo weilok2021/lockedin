@@ -1,7 +1,7 @@
 -- +goose Up
 CREATE TABLE email_tokens (
   token         text PRIMARY KEY,
-  user_id       uuid REFERENCES users(id) NOT NULL,
+  user_id       uuid REFERENCES users(id) ON DELETE CASCADE NOT NULL,
   purpose       text NOT NULL,                 -- 'verify' | 'password_reset'
   expires_at    timestamptz NOT NULL,
   used_at       timestamptz

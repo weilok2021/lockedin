@@ -12,5 +12,5 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Printf("starting server on %s\n", cfg.Server.Port)
+	log.Printf("starting server on %s\n", cfg.Port)
 }
