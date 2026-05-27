@@ -1,5 +1,5 @@
 -- name: CreateUser :one
-INSERT INTO users(id, email, password_hash)
+INSERT INTO users(id, email, hashed_password)
 VALUES (gen_random_uuid(), $1, $2)
 RETURNING *;
 
@@ -13,7 +13,7 @@ WHERE id = $1;
 
 -- name: UpdatePassword :exec
 UPDATE users 
-SET password_hash = $1, updated_at = NOW()
+SET hashed_password = $1, updated_at = NOW()
 WHERE id = $2;
 
 -- name: SetEmailVerified :exec

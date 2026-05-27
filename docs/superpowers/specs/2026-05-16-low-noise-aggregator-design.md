@@ -108,7 +108,7 @@ Seven Postgres tables. SQL types below are illustrative; exact types resolved du
 users (
   id                  uuid PRIMARY KEY,
   email               text UNIQUE NOT NULL,
-  password_hash       text NOT NULL,           -- bcrypt or argon2id
+  hashed_password       text NOT NULL,           -- bcrypt or argon2id
   email_verified_at   timestamptz,             -- NULL until verified
   created_at          timestamptz NOT NULL DEFAULT now(),
   updated_at          timestamptz NOT NULL DEFAULT now()
@@ -261,7 +261,7 @@ If SMTP fails: notification rows are not inserted. The next fetch tick retries.
 ```
 POST /signup { email, password }
   → Validate password meets minimum requirements
-  → INSERT users (email, password_hash = bcrypt(password), email_verified_at = NULL)
+  → INSERT users (email, hashed_password = bcrypt(password), email_verified_at = NULL)
   → INSERT email_tokens (token, user_id, purpose='verify', expires_at = now + 24h)
   → Send verification email
   → 200 "Check your email"
@@ -281,7 +281,7 @@ GET /verify?token=<t>
 ```
 POST /login { email, password }
   → SELECT users WHERE email = $1
-  → Verify bcrypt(password, password_hash)
+  → Verify bcrypt(password, hashed_password)
   → Require email_verified_at IS NOT NULL
   → INSERT sessions (token, user_id, expires_at = now + 30d)
   → Set-Cookie: session=<token>; HttpOnly; Secure; SameSite=Lax
@@ -301,7 +301,7 @@ POST /forgot { email }
 GET  /reset?token=<t>   → render form for new password (after validating token)
 POST /reset { token, new_password }
   → Validate token (matches above rules)
-  → UPDATE users SET password_hash = bcrypt(new_password), updated_at = now()
+  → UPDATE users SET hashed_password = bcrypt(new_password), updated_at = now()
   → UPDATE email_tokens SET used_at = now()
   → DELETE FROM sessions WHERE user_id = <user>  -- invalidate all sessions
   → 302 → /login
@@ -311,8 +311,8 @@ POST /reset { token, new_password }
 ```
 POST /settings/password { current_password, new_password }
   → Verify session
-  → Verify bcrypt(current_password, password_hash)
-  → UPDATE users SET password_hash = bcrypt(new_password), updated_at = now()
+  → Verify bcrypt(current_password, hashed_password)
+  → UPDATE users SET hashed_password = bcrypt(new_password), updated_at = now()
   → DELETE FROM sessions WHERE user_id = <user> AND token != <current_session>
   → 200 OK
 ```

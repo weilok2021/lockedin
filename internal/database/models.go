@@ -60,7 +60,7 @@ type Session struct {
 type User struct {
 	ID              uuid.UUID
 	Email           string
-	PasswordHash    string
+	HashedPassword  string
 	EmailVerifiedAt sql.NullTime
 	CreatedAt       time.Time
 	UpdatedAt       time.Time

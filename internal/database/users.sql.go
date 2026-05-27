@@ -12,23 +12,23 @@ import (
 )
 
 const createUser = `-- name: CreateUser :one
-INSERT INTO users(id, email, password_hash)
+INSERT INTO users(id, email, hashed_password)
 VALUES (gen_random_uuid(), $1, $2)
-RETURNING id, email, password_hash, email_verified_at, created_at, updated_at
+RETURNING id, email, hashed_password, email_verified_at, created_at, updated_at
 `
 
 type CreateUserParams struct {
-	Email        string
-	PasswordHash string
+	Email          string
+	HashedPassword string
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
-	row := q.db.QueryRowContext(ctx, createUser, arg.Email, arg.PasswordHash)
+	row := q.db.QueryRowContext(ctx, createUser, arg.Email, arg.HashedPassword)
 	var i User
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
-		&i.PasswordHash,
+		&i.HashedPassword,
 		&i.EmailVerifiedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -37,7 +37,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, email, password_hash, email_verified_at, created_at, updated_at FROM users 
+SELECT id, email, hashed_password, email_verified_at, created_at, updated_at FROM users 
 WHERE email = $1
 `
 
@@ -47,7 +47,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
-		&i.PasswordHash,
+		&i.HashedPassword,
 		&i.EmailVerifiedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -56,7 +56,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, email, password_hash, email_verified_at, created_at, updated_at FROM users 
+SELECT id, email, hashed_password, email_verified_at, created_at, updated_at FROM users 
 WHERE id = $1
 `
 
@@ -66,7 +66,7 @@ func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (User, error) {
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
-		&i.PasswordHash,
+		&i.HashedPassword,
 		&i.EmailVerifiedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -87,16 +87,16 @@ func (q *Queries) SetEmailVerified(ctx context.Context, id uuid.UUID) error {
 
 const updatePassword = `-- name: UpdatePassword :exec
 UPDATE users 
-SET password_hash = $1, updated_at = NOW()
+SET hashed_password = $1, updated_at = NOW()
 WHERE id = $2
 `
 
 type UpdatePasswordParams struct {
-	PasswordHash string
-	ID           uuid.UUID
+	HashedPassword string
+	ID             uuid.UUID
 }
 
 func (q *Queries) UpdatePassword(ctx context.Context, arg UpdatePasswordParams) error {
-	_, err := q.db.ExecContext(ctx, updatePassword, arg.PasswordHash, arg.ID)
+	_, err := q.db.ExecContext(ctx, updatePassword, arg.HashedPassword, arg.ID)
 	return err
 }
