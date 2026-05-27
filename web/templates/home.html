@@ -1,0 +1,22 @@
+{{define "content"}}
+<nav class="app-nav">
+    <div class="app-nav-inner">
+        <a href="/" class="nav-brand">LockedIn</a>
+        <div class="nav-right">
+            <span class="nav-email">{{.Email}}</span>
+            <form method="POST" action="/logout" style="margin: 0;">
+                <button class="btn btn-outline btn-sm" type="submit">Sign out</button>
+            </form>
+        </div>
+    </div>
+</nav>
+
+<main class="app-main">
+    <div class="empty-state">
+        <h1 class="empty-state-title">Your feed is empty</h1>
+        <p class="empty-state-text">
+            Subscribe to blogs, channels, and RSS feeds to start receiving your curated digest. No algorithms, no noise.
+        </p>
+    </div>
+</main>
+{{end}}

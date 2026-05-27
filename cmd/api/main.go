@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html/template"
 	"log"
 	"net/http"
 	"time"
@@ -17,9 +18,16 @@ import (
 )
 
 type App struct {
-	db      *sql.DB
-	queries *database.Queries
-	cfg     config.Config
+	db        *sql.DB
+	queries   *database.Queries
+	cfg       config.Config
+	templates map[string]*template.Template
+}
+
+type PageData struct {
+	Title   string
+	Message string
+	Email   string
 }
 
 // For middlewares and handlers to access to login user struct, (authorization)
@@ -46,10 +54,16 @@ func main() {
 		log.Fatal(err)
 	}
 
+	templates := make(map[string]*template.Template)
+	templates["signup"] = template.Must(template.ParseFiles("web/templates/layout.html", "web/templates/signup.html"))
+	templates["login"] = template.Must(template.ParseFiles("web/templates/layout.html", "web/templates/login.html"))
+	templates["home"] = template.Must(template.ParseFiles("web/templates/layout.html", "web/templates/home.html"))
+
 	app := &App{
-		db:      db,
-		queries: database.New(db),
-		cfg:     cfg,
+		db:        db,
+		queries:   database.New(db),
+		cfg:       cfg,
+		templates: templates,
 	}
 
 	mux := http.NewServeMux()
@@ -62,15 +76,15 @@ func main() {
 		IdleTimeout:  120 * time.Second, // Time to keep idle connections open
 	}
 
-	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("This is the Home Page!\n"))
-	})
+	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.Dir("web/static"))))
 	mux.HandleFunc("GET /healthz", app.handlerHealthz)
+	mux.HandleFunc("GET /signup", app.handlerSignUpForm)
 	mux.HandleFunc("POST /signup", app.handlerSignUp)
-	mux.HandleFunc("GET /verify", app.handlerVerifyEmail)
+	mux.HandleFunc("GET /login", app.handlerLoginForm)
 	mux.HandleFunc("POST /login", app.handlerLogin)
+	mux.HandleFunc("GET /verify", app.handlerVerifyEmail)
 	mux.HandleFunc("POST /logout", app.middlewareAuthorization(app.handlerLogout))
+	mux.HandleFunc("GET /", app.middlewareAuthorization(app.handlerHome))
 	if cfg.Environment == "development" {
 		mux.HandleFunc("POST /dev/reset", app.handlerDevReset)
 	}
@@ -86,6 +100,25 @@ func main() {
 func (a *App) handlerHealthz(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("ok\n"))
+}
+
+func (a *App) handlerHome(w http.ResponseWriter, r *http.Request) {
+	user := r.Context().Value(userContextKey).(database.User)
+	a.templates["home"].ExecuteTemplate(w, "layout", PageData{
+		Title: "Home",
+		Email: user.Email,
+	})
+}
+
+func (a *App) handlerSignUpForm(w http.ResponseWriter, r *http.Request) {
+	a.templates["signup"].ExecuteTemplate(w, "layout", PageData{Title: "Sign Up"})
+}
+
+func (a *App) handlerLoginForm(w http.ResponseWriter, r *http.Request) {
+	a.templates["login"].ExecuteTemplate(w, "layout", PageData{
+		Title:   "Sign In",
+		Message: r.URL.Query().Get("msg"),
+	})
 }
 
 func (a *App) handlerSignUp(w http.ResponseWriter, r *http.Request) {
@@ -189,7 +222,7 @@ func (a *App) handlerVerifyEmail(w http.ResponseWriter, r *http.Request) {
 
 	// dev mode: log the message that tell users have been redirected to login page
 	log.Printf("Redirect to login page: http://localhost:%s/login", a.cfg.Port)
-	http.Redirect(w, r, "/login", http.StatusFound)
+	http.Redirect(w, r, "/login?msg=verified", http.StatusSeeOther)
 }
 
 func (a *App) handlerLogin(w http.ResponseWriter, r *http.Request) {

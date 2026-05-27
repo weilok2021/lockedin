@@ -1,0 +1,31 @@
+{{define "content"}}
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="brand">
+            <div class="brand-name">LockedIn</div>
+            <div class="brand-tagline">Your quiet corner of the internet</div>
+        </div>
+
+        <form class="auth-form" method="POST" action="/signup">
+            <h2 class="form-title">Create your account</h2>
+
+            <div class="form-group">
+                <label class="form-label" for="email">Email address</label>
+                <input class="form-input" type="email" id="email" name="email" placeholder="you@example.com" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="password">Password</label>
+                <input class="form-input" type="password" id="password" name="password" placeholder="Create a password" required>
+                <div class="form-hint">At least 10 characters with uppercase, lowercase, number, and special character</div>
+            </div>
+
+            <button class="btn btn-primary" type="submit">Sign up</button>
+        </form>
+
+        <div class="auth-footer">
+            Already have an account? <a href="/login">Sign in</a>
+        </div>
+    </div>
+</div>
+{{end}}
