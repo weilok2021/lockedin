@@ -2,7 +2,7 @@
 
 **Status:** Approved design, ready for implementation planning
 **Date:** 2026-05-16
-**Local-only:** This document is gitignored. Do not commit or push.
+**Tracked:** This document lives in the repo and is kept in sync with the implementation.
 
 ---
 
@@ -17,7 +17,7 @@ The project also serves as an applied capstone for the user's Boot.dev backend c
 ## 2. Goals (v1)
 
 1. **Multi-user web application** with password-based authentication and email verification.
-2. **RSS/Atom subscription management** — users can add, view, and remove feed URLs.
+2. **Topic-based subscription management** — users add, view, and remove *topics* (e.g. "Claude Code"); the system turns each topic into an RSS/Atom feed behind the scenes. Users never handle feed URLs directly.
 3. **Periodic content fetcher** — a background process pulls new items from all subscribed feeds on a fixed schedule.
 4. **Personalized web UI** — server-rendered HTML showing the user's items in reverse chronological order.
 5. **Email notification on new items** — at most one email per user per fetch cycle, only if new items were found.
@@ -32,7 +32,7 @@ Explicitly out of scope for v1, with notes on where each could plug in later:
 - **Scraping JS-rendered pages, Twitter/X, LinkedIn** — fragile and platform-hostile; deferred.
 - **Read-state tracking ("mark as read")** — additive change (new table); add only if a real need emerges.
 - **Native mobile apps** — out of scope.
-- **Public content discovery surface** — conflicts with the project's anti-recommendation thesis.
+- **Public content discovery surface** — conflicts with the project's anti-recommendation thesis. Note: *explicit topic subscription* (the user types a topic, the system maps it to a feed — see §6.4) is **in scope** and distinct from this. The user chooses; there is no algorithmic ranking, suggestion, or engagement surface. Turning a topic into a feed is plumbing, not recommendation.
 - **AWS-specific services (RDS, ECS, SES, S3)** — deferred to v2 polish; v1 uses a single VPS with Docker Compose (see §11).
 - **JWT-based auth** — server-side sessions are the correct tool for a single-backend web app.
 
@@ -335,11 +335,19 @@ GET /
 ```
 
 ```
-GET    /sources                  → list user's subscriptions
-POST   /sources { feed_url }     → upsert feeds row, INSERT user_subscriptions
+GET    /sources                  → list user's subscriptions (show custom_title = topic label + last_fetch_status)
+POST   /sources { topic }        → map topic → feed_url (provider, v1 = Google News search RSS),
+                                   validate (fetch + parse), upsert feeds row,
+                                   INSERT user_subscriptions (custom_title = topic)
 DELETE /sources/{feed_id}        → DELETE FROM user_subscriptions WHERE user_id=me AND feed_id=$1
                                    (the feeds row stays — other users may subscribe)
 ```
+
+The user submits a **topic**, never a URL. The backend turns the topic into a feed URL via a pluggable
+"provider" (v1: Google News search RSS, `news.google.com/rss/search?q=<topic>`). One topic maps to one
+feed; the topic label lives in `user_subscriptions.custom_title`. This requires no schema change and leaves
+the fetcher (§6.1) untouched — a topic feed is just a feed. Multiple providers per topic is a v2 addition
+(modeled as multiple subscriptions sharing one `custom_title`, no migration).
 
 ## 7. Security
 

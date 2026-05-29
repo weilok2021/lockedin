@@ -2,7 +2,7 @@
 
 **Companion spec:** `docs/superpowers/specs/2026-05-16-low-noise-aggregator-design.md`
 **Status:** Active
-**Local-only:** This document is gitignored. Do not commit or push.
+**Tracked:** This document lives in the repo and is kept in sync with the implementation.
 
 ---
 
@@ -271,38 +271,51 @@ lockedin/
 
 ## Milestone 5: Sources management
 
-**Goal:** Users can add, list, and remove RSS feed subscriptions.
+**Goal:** Users can subscribe to **topics**, list their subscriptions, and remove them.
+
+**Design note (decided 2026-05-29):** Users do **not** paste RSS URLs. An average user doesn't know what an RSS feed is, and asking them to find one is hostile UX. Instead the user enters a **topic** (e.g. "Claude Code", "AI agents") and the backend turns that topic into a feed URL behind the scenes. This is a UX decision, not a curation strategy — the user still explicitly chooses what they subscribe to; nothing is algorithmically recommended. The RSS architecture is unchanged: a topic simply *becomes* a feed.
+
+**Key modeling decision — one topic = one feed.** The constructed search URL is the `feeds.feed_url` (still the unique key, so two users on the same topic share one feed row and one fetch). The human-readable topic label is stored in `user_subscriptions.custom_title`. **No schema change** — `custom_title` already exists for exactly this. Do *not* fan a topic out to multiple feeds in v1; see the future-path note below.
+
+**v1 provider — Google News.** Since topics are arbitrary user input and there's no curation, v1 uses **Google News search RSS** as the single source — it covers any topic: `https://news.google.com/rss/search?q=<topic>`. It's noisier than a hand-picked blog (that's what v2 relevance scoring is for) and its item links are Google redirect URLs (acceptable for v1). HN/Reddit/YouTube are dev/niche-only and deferred.
 
 **Done when:**
-- POST `/sources` accepts a feed URL, validates it's a real feed (one-shot fetch + parse), upserts the `feeds` row, inserts `user_subscriptions`. Returns clear error on invalid URL.
-- GET `/sources` lists the user's subscriptions with title, URL, last fetch status.
-- DELETE `/sources/{feed_id}` (or POST with `_method=DELETE`) removes the subscription. The `feeds` row stays (other users may subscribe).
-- HTML forms for add/remove work in the browser.
+- POST `/sources` accepts a **topic string**, constructs the provider feed URL, validates it's a real feed (one-shot fetch + parse), upserts the `feeds` row, inserts `user_subscriptions` with the topic as `custom_title`. Returns a clear error if the fetch/parse fails.
+- GET `/sources` lists the user's subscriptions showing the **topic label**, the source, and last fetch status.
+- DELETE `/sources/{feed_id}` (or POST `/sources/{feed_id}/delete`) removes the subscription, scoped by `user_id`. The `feeds` row stays (other users may subscribe).
+- HTML forms for add/remove work in the browser (a topic text box, optionally with a few suggested-topic chips).
 
 **Spec reference:** §6.4 Reading flow
 
 **Library/tooling:**
 - `github.com/mmcdole/gofeed` — RSS/Atom parser. Handles both formats uniformly.
-- Reuse chi router, html/template from Milestone 4.
+- `net/url` (stdlib) — build the query URL safely (`url.Values{...}.Encode()`); never hand-concatenate.
+- Reuse the router and html/template from Milestone 4.
 
 **Implementation considerations:**
 
-- **Feed validation on add:** Don't trust the user's URL. Fetch it, parse it, fail if it's not a valid feed. Show a clear error: "That URL didn't return a valid RSS or Atom feed." This validation should also extract the feed's `title` and `site_url` to populate the `feeds` row.
-- **Don't bulk-fetch items on add.** Just save the feed and let the next fetcher tick pick up items. Otherwise you'll fight rate limits and complicate the code.
-- **Upsert pattern for feeds:**
+- **Topic → URL is a named "provider."** Put the mapping in its own small unit (e.g. `internal/feeds/topic.go`, `FeedURLForTopic(topic) (url, source, error)`). v1 ships one provider (Google News). Adding HN/Reddit later is then purely additive — a new function, no changes to existing code, no migration. Have it return a **single** URL for v1; returning a slice would pull the multi-source insert/partial-failure complexity forward for no benefit.
+- **Normalize the topic first.** Trim and collapse internal whitespace before building the URL, so " Claude  Code " and "Claude Code" don't create two near-duplicate feed rows.
+- **Validation still applies.** Fetch + parse the constructed URL (`gofeed`) to confirm it returns a valid feed; show a clear error ("Couldn't load that topic — try different wording") on failure. A valid feed with **zero items is success** (`last_fetch_status='ok'`) — an obscure topic legitimately returns an empty feed; that is not an error.
+- **Title display.** `gofeed` will report a title like "Claude Code - Google News". You may store it in `feeds.title`, but **display `custom_title`** (the user's clean topic). Decide this in your `ListSubscriptions` query.
+- **Don't bulk-fetch items on add.** Just save the feed and let the next fetcher tick pick up items.
+- **Upsert pattern for feeds** (note `feeds.id` has no DB default — supply `gen_random_uuid()` yourself, as the users query does):
   ```
-  INSERT INTO feeds (feed_url, ...) VALUES (...)
+  INSERT INTO feeds (id, feed_url, ...) VALUES (gen_random_uuid(), $1, ...)
   ON CONFLICT (feed_url) DO UPDATE SET title = EXCLUDED.title  -- refresh title
   RETURNING id
   ```
-  This lets you get back the feed_id whether the row was new or existed.
+  This returns the feed_id whether the row was new or existed.
 - **HTTP timeout for validation fetch:** 10s. Don't let a slow remote server hang your handler.
-- **User-Agent header:** Always set a descriptive User-Agent. `Lockedin/0.1 (https://yourdomain.com)` or similar. Be a good citizen.
-- **DELETE via HTML forms:** Browsers can't natively send DELETE from a form. Either use a hidden `_method=DELETE` field + middleware, or use POST `/sources/{id}/delete`. Both are fine; pick one and stick with it.
+- **User-Agent header:** Always set a descriptive User-Agent (`Lockedin/0.1 (+https://yourdomain.com)`). Google News in particular may reject requests without one.
+- **DELETE via HTML forms:** Browsers can't natively send DELETE from a form. Use a hidden `_method=DELETE` field + middleware, or POST `/sources/{id}/delete`. Pick one and stick with it.
+
+**Future path (no schema change needed):** When you want a topic to pull from multiple sources, that becomes *multiple `feeds` rows + multiple `user_subscriptions` sharing the same `custom_title`* — the label becomes a display grouping in the UI, and "delete topic" deletes the rows sharing that label. The data model already supports this; v1 just keeps it at one.
 
 **What to test:**
-- Add a real feed URL → subscription exists.
-- Add an invalid URL → clear error, no subscription.
+- Add a topic → subscription exists with the topic as `custom_title`, feed_url is the constructed URL.
+- `FeedURLForTopic` unit test: topic with spaces/special chars encodes correctly; normalization collapses whitespace.
+- Validation failure (unreachable/garbage provider response) → clear error, no subscription.
 - Delete a subscription → row gone; feeds row remains.
 - User A can't delete user B's subscription (per-user scoping in the handler).
 
