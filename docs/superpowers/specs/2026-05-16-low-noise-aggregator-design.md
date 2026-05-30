@@ -335,11 +335,11 @@ GET /
 ```
 
 ```
-GET    /sources                  → list user's subscriptions (show custom_title = topic label + last_fetch_status)
-POST   /sources { topic }        → map topic → feed_url (provider, v1 = Google News search RSS),
+GET    /subscriptions                  → list user's subscriptions (show custom_title = topic label + last_fetch_status)
+POST   /subscriptions { topic }        → map topic → feed_url (provider, v1 = Google News search RSS),
                                    validate (fetch + parse), upsert feeds row,
                                    INSERT user_subscriptions (custom_title = topic)
-DELETE /sources/{feed_id}        → DELETE FROM user_subscriptions WHERE user_id=me AND feed_id=$1
+DELETE /subscriptions/{feed_id}        → DELETE FROM user_subscriptions WHERE user_id=me AND feed_id=$1
                                    (the feeds row stays — other users may subscribe)
 ```
 
@@ -378,7 +378,7 @@ Principle: **fail loudly per-feed, gracefully overall.**
 | Body returned but not valid RSS/Atom | Record `last_fetch_status='parse_error'`. Continue. |
 | Valid feed, zero items | Treat as success (`last_fetch_status='ok'`). |
 
-Each feed is processed in its own error boundary. One bad feed never aborts the tick. Status is surfaced in the `/sources` UI so the user can see which subscriptions are broken.
+Each feed is processed in its own error boundary. One bad feed never aborts the tick. Status is surfaced in the `/subscriptions` UI so the user can see which subscriptions are broken.
 
 ### 8.2 Idempotency
 
@@ -516,7 +516,7 @@ None of these require migration of existing v1 data.
 Realistic estimate: **4 to 6 weekends**. Breakdown:
 
 - ~1 weekend: multi-user auth surface (signup, verification, login, password reset, change password, session management).
-- ~2-3 weekends: core feature work (schema, fetcher loop, RSS parsing, item dedupe, notification path, web UI rendering, sources management).
+- ~2-3 weekends: core feature work (schema, fetcher loop, RSS parsing, item dedupe, notification path, web UI rendering, subscriptions management).
 - ~1 weekend: testing (Tier 1 coverage).
 - ~1 weekend: containerization + first deployment (Dockerfiles, docker-compose, Caddy, host setup, domain/DNS).
 

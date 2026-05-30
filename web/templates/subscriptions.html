@@ -1,0 +1,69 @@
+{{define "content"}}
+<nav class="app-nav">
+    <div class="app-nav-inner">
+        <a href="/" class="nav-brand">LockedIn</a>
+        <div class="nav-right">
+            <span class="nav-email">{{.Email}}</span>
+            <form method="POST" action="/logout" style="margin: 0;">
+                <button class="btn btn-outline btn-sm" type="submit">Sign out</button>
+            </form>
+        </div>
+    </div>
+</nav>
+
+<main class="app-main">
+    <header class="page-header">
+        <h1 class="page-title">Subscriptions</h1>
+        <p class="page-subtitle">Follow a topic and we'll pull it into your digest. No URLs, no algorithms.</p>
+    </header>
+
+    {{if eq .Message "added"}}
+    <div class="message message-success">Subscription added. New items will appear after the next fetch.</div>
+    {{end}}
+    {{if eq .Message "invalid"}}
+    <div class="message message-error">Couldn't load that topic — try different wording.</div>
+    {{end}}
+    {{if eq .Message "removed"}}
+    <div class="message message-info">Subscription removed.</div>
+    {{end}}
+
+    <form class="add-form" method="POST" action="/subscriptions">
+        <input
+            class="form-input add-input"
+            type="text"
+            name="topic"
+            placeholder="e.g. Claude Code, AI agents, Rust async"
+            required
+            autofocus>
+        <button class="btn btn-primary add-btn" type="submit">Follow</button>
+    </form>
+
+    {{if .Subscriptions}}
+    <ul class="sub-list">
+        {{range .Subscriptions}}
+        <li class="sub-item">
+            <div class="sub-main">
+                <span class="sub-title">{{if .CustomTitle.Valid}}{{.CustomTitle.String}}{{else}}(untitled){{end}}</span>
+                <span class="sub-meta">
+                    via Google News ·
+                    {{if .LastFetchStatus.Valid}}
+                        <span class="status status-{{.LastFetchStatus.String}}">{{.LastFetchStatus.String}}</span>
+                    {{else}}
+                        <span class="status status-pending">pending</span>
+                    {{end}}
+                </span>
+            </div>
+            <form method="POST" action="/subscriptions/{{.FeedID}}/delete" class="sub-remove">
+                <button class="btn btn-ghost btn-sm" type="submit">Remove</button>
+            </form>
+        </li>
+        {{end}}
+    </ul>
+    {{else}}
+    <div class="empty-state">
+        <h2 class="empty-state-title">No subscriptions yet</h2>
+        <p class="empty-state-text">Add a topic above to start building your low-noise feed.</p>
+    </div>
+    {{end}}
+</main>
+{{end}}

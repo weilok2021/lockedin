@@ -11,10 +11,13 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/google/uuid"
 	_ "github.com/lib/pq"
+	"github.com/mmcdole/gofeed"
 	"github.com/weilok2021/lockedin/internal/auth"
 	"github.com/weilok2021/lockedin/internal/config"
 	"github.com/weilok2021/lockedin/internal/database"
+	"github.com/weilok2021/lockedin/internal/feeds"
 )
 
 type App struct {
@@ -25,9 +28,10 @@ type App struct {
 }
 
 type PageData struct {
-	Title   string
-	Message string
-	Email   string
+	Title         string
+	Message       string
+	Email         string
+	Subscriptions []database.ListUserSubscriptionsRow
 }
 
 // For middlewares and handlers to access to login user struct, (authorization)
@@ -58,6 +62,7 @@ func main() {
 	templates["signup"] = template.Must(template.ParseFiles("web/templates/layout.html", "web/templates/signup.html"))
 	templates["login"] = template.Must(template.ParseFiles("web/templates/layout.html", "web/templates/login.html"))
 	templates["home"] = template.Must(template.ParseFiles("web/templates/layout.html", "web/templates/home.html"))
+	templates["subscriptions"] = template.Must(template.ParseFiles("web/templates/layout.html", "web/templates/subscriptions.html"))
 
 	app := &App{
 		db:        db,
@@ -85,6 +90,12 @@ func main() {
 	mux.HandleFunc("GET /verify", app.handlerVerifyEmail)
 	mux.HandleFunc("POST /logout", app.middlewareAuthorization(app.handlerLogout))
 	mux.HandleFunc("GET /", app.middlewareAuthorization(app.handlerHome))
+
+	// USER subscriptions
+	mux.HandleFunc("GET /subscriptions", app.middlewareAuthorization(app.handlerListSubscriptions))
+	mux.HandleFunc("POST /subscriptions", app.middlewareAuthorization(app.handlerCreateSubscription))
+	mux.HandleFunc("POST /subscriptions/{feed_id}/delete", app.middlewareAuthorization(app.handlerDeleteSubscription))
+
 	if cfg.Environment == "development" {
 		mux.HandleFunc("POST /dev/reset", app.handlerDevReset)
 	}
@@ -302,6 +313,90 @@ func (a *App) handlerLogout(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/login", http.StatusSeeOther)
 }
 
+// GET /sources lists the user's subscriptions showing the topic label, the source, and last fetch status.
+func (a *App) handlerListSubscriptions(w http.ResponseWriter, r *http.Request) {
+	// pull the user the middleware put into this request, and treat it as a database.User.
+	user := r.Context().Value(userContextKey).(database.User)
+	subscriptions, err := a.queries.ListUserSubscriptions(r.Context(), user.ID)
+	if err != nil {
+		responseWithError(w, http.StatusInternalServerError, "Could not load subscriptions", err)
+		return
+	}
+	a.templates["subscriptions"].ExecuteTemplate(w, "layout", PageData{
+		Title:         "Subscriptions",
+		Email:         user.Email,
+		Message:       r.URL.Query().Get("msg"),
+		Subscriptions: subscriptions,
+	})
+}
+
+// handlerCreateSubscription (POST /subscriptions):
+//  1. userから context; topic := r.FormValue("topic")
+//  2. feedURL, _, err := feeds.FeedURLForTopic(topic)   // err → redirect ?msg=invalid
+//  3. validate: fetch + parse feedURL with gofeed        // err → redirect ?msg=invalid
+//  4. feedRow := UpsertFeed(...)  → CreateUserSubscription(user.ID, feedRow.ID, topic)
+//  5. redirect /subscriptions?msg=added
+
+// POST /sources accepts a topic string, constructs the provider feed URL,
+// validates it's a real feed (one-shot fetch + parse),
+// upserts the feeds row, inserts user_subscriptions with the topic as custom_title.
+// Returns a clear error if the fetch/parse fails.
+func (a *App) handlerCreateSubscription(w http.ResponseWriter, r *http.Request) {
+	topic := r.FormValue("topic")
+	feedURL, _, err := feeds.FeedURLForTopic(topic)
+	if err != nil {
+		http.Redirect(w, r, "/subscriptions?msg=invalid", http.StatusSeeOther)
+		return
+	}
+	fp := gofeed.NewParser()
+	fp.UserAgent = "Lockedin/0.1 (+https://github.com/weilok2021/lockedin)"
+
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+
+	fetchedFeed, err := fp.ParseURLWithContext(feedURL, ctx)
+	if err != nil {
+		http.Redirect(w, r, "/subscriptions?msg=invalid", http.StatusSeeOther)
+		return
+	}
+	dbFeed, err := a.queries.UpsertFeed(r.Context(), database.UpsertFeedParams{
+		FeedUrl: feedURL,
+		Title:   sql.NullString{String: fetchedFeed.Title, Valid: fetchedFeed.Title != ""},
+		SiteUrl: sql.NullString{String: fetchedFeed.Link, Valid: fetchedFeed.Link != ""},
+	})
+	if err != nil {
+		responseWithError(w, http.StatusInternalServerError, "Could not save subscription", err)
+		return
+	}
+	user := r.Context().Value(userContextKey).(database.User)
+	if err := a.queries.CreateUserSubscription(r.Context(), database.CreateUserSubscriptionParams{
+		UserID:      user.ID,
+		FeedID:      dbFeed.ID,
+		CustomTitle: sql.NullString{String: topic, Valid: true},
+	}); err != nil {
+		responseWithError(w, http.StatusInternalServerError, "Could not save subscription", err)
+		return
+	}
+	http.Redirect(w, r, "/subscriptions?msg=added", http.StatusSeeOther)
+}
+
+func (a *App) handlerDeleteSubscription(w http.ResponseWriter, r *http.Request) {
+	user := r.Context().Value(userContextKey).(database.User)
+	feedID, err := uuid.Parse(r.PathValue("feed_id"))
+	if err != nil {
+		http.Redirect(w, r, "/subscriptions?msg=invalid", http.StatusSeeOther)
+		return
+	}
+	if err := a.queries.DeleteUserSubscription(r.Context(), database.DeleteUserSubscriptionParams{
+		UserID: user.ID,
+		FeedID: feedID,
+	}); err != nil {
+		responseWithError(w, http.StatusInternalServerError, "Could not remove subscription", err)
+		return
+	}
+	http.Redirect(w, r, "/subscriptions?msg=removed", http.StatusSeeOther)
+}
+
 // helper function to sends json response
 func responseWithJson(w http.ResponseWriter, status int, payload interface{}) {
 	w.Header().Set("Content-Type", "application/json")
@@ -349,10 +444,3 @@ func (a *App) handlerDevReset(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("all tables reset\n"))
 }
-
-// POST /signup { email, password }
-//   → Validate password meets minimum requirements
-//   → INSERT users (email, hashed_password = bcrypt(password), email_verified_at = NULL)
-//   → INSERT email_tokens (token, user_id, purpose='verify', expires_at = now + 24h)
-//   → Send verification email
-//   → 200 "Check your email"

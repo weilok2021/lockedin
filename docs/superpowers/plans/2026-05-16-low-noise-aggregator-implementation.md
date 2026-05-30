@@ -25,7 +25,7 @@ This is a **mentor-style plan**, not an agent-execution script. You implement th
 | 2 | Schema + migrations | 0.5 weekend |
 | 3 | DB access layer | 0.5-1 weekend |
 | 4 | Auth surface | 1-1.5 weekends |
-| 5 | Sources management | 0.5 weekend |
+| 5 | Subscriptions management | 0.5 weekend |
 | 6 | Fetcher core | 1 weekend |
 | 7 | Web UI for reading | 1 weekend |
 | 8 | Notification path | 0.5 weekend |
@@ -269,7 +269,7 @@ lockedin/
 
 ---
 
-## Milestone 5: Sources management
+## Milestone 5: Subscriptions management
 
 **Goal:** Users can subscribe to **topics**, list their subscriptions, and remove them.
 
@@ -280,9 +280,9 @@ lockedin/
 **v1 provider — Google News.** Since topics are arbitrary user input and there's no curation, v1 uses **Google News search RSS** as the single source — it covers any topic: `https://news.google.com/rss/search?q=<topic>`. It's noisier than a hand-picked blog (that's what v2 relevance scoring is for) and its item links are Google redirect URLs (acceptable for v1). HN/Reddit/YouTube are dev/niche-only and deferred.
 
 **Done when:**
-- POST `/sources` accepts a **topic string**, constructs the provider feed URL, validates it's a real feed (one-shot fetch + parse), upserts the `feeds` row, inserts `user_subscriptions` with the topic as `custom_title`. Returns a clear error if the fetch/parse fails.
-- GET `/sources` lists the user's subscriptions showing the **topic label**, the source, and last fetch status.
-- DELETE `/sources/{feed_id}` (or POST `/sources/{feed_id}/delete`) removes the subscription, scoped by `user_id`. The `feeds` row stays (other users may subscribe).
+- POST `/subscriptions` accepts a **topic string**, constructs the provider feed URL, validates it's a real feed (one-shot fetch + parse), upserts the `feeds` row, inserts `user_subscriptions` with the topic as `custom_title`. Returns a clear error if the fetch/parse fails.
+- GET `/subscriptions` lists the user's subscriptions showing the **topic label**, the source, and last fetch status.
+- DELETE `/subscriptions/{feed_id}` (or POST `/subscriptions/{feed_id}/delete`) removes the subscription, scoped by `user_id`. The `feeds` row stays (other users may subscribe).
 - HTML forms for add/remove work in the browser (a topic text box, optionally with a few suggested-topic chips).
 
 **Spec reference:** §6.4 Reading flow
@@ -308,7 +308,7 @@ lockedin/
   This returns the feed_id whether the row was new or existed.
 - **HTTP timeout for validation fetch:** 10s. Don't let a slow remote server hang your handler.
 - **User-Agent header:** Always set a descriptive User-Agent (`Lockedin/0.1 (+https://yourdomain.com)`). Google News in particular may reject requests without one.
-- **DELETE via HTML forms:** Browsers can't natively send DELETE from a form. Use a hidden `_method=DELETE` field + middleware, or POST `/sources/{id}/delete`. Pick one and stick with it.
+- **DELETE via HTML forms:** Browsers can't natively send DELETE from a form. Use a hidden `_method=DELETE` field + middleware, or POST `/subscriptions/{id}/delete`. Pick one and stick with it.
 
 **Future path (no schema change needed):** When you want a topic to pull from multiple sources, that becomes *multiple `feeds` rows + multiple `user_subscriptions` sharing the same `custom_title`* — the label becomes a display grouping in the UI, and "delete topic" deletes the rows sharing that label. The data model already supports this; v1 just keeps it at one.
 
@@ -387,13 +387,13 @@ lockedin/
 
 ## Milestone 7: Web UI for reading
 
-**Goal:** A minimal but functional web UI for landing, login, feed viewing, sources management, and settings.
+**Goal:** A minimal but functional web UI for landing, login, feed viewing, subscriptions management, and settings.
 
 **Done when:**
 - GET `/` shows the landing page (with login form) when logged out, the personalized feed when logged in.
 - Feed view shows items in reverse-chronological order, grouped by feed name or shown as a flat list (your call — the spec doesn't dictate).
 - Each item: feed name, title (linked to original URL, `target="_blank" rel="noopener"`), published date, optional excerpt from `content`.
-- `/sources` page works as a UI, not just as JSON endpoints.
+- `/subscriptions` page works as a UI, not just as JSON endpoints.
 - `/settings` page lets the user change their password.
 - Logout is a button somewhere visible.
 - CSS exists but is minimal — this is not a frontend project.
@@ -413,7 +413,7 @@ lockedin/
   ├── layout.html        (defines: title, content blocks)
   ├── landing.html       (login form + marketing)
   ├── feed.html          (logged-in home — the personalized feed)
-  ├── sources.html       (manage subscriptions)
+  ├── subscriptions.html (manage subscriptions)
   ├── settings.html      (change password)
   └── auth/
       ├── signup.html
@@ -437,7 +437,7 @@ lockedin/
 - **HTML escaping:** `html/template` auto-escapes. To render trusted HTML (feed content after bluemonday sanitization), use `template.HTML(sanitizedString)` — this opts out of escaping for that specific value. Be very deliberate; this is the most common XSS source.
 - **Content sanitization:** Run all `items.content` through `bluemonday.UGCPolicy()` before rendering. This strips `<script>` and other dangerous tags but keeps formatting.
 - **Pagination:** Skip for v1. Show last 100 items. Add pagination if it becomes annoying.
-- **Empty states:** Handle "no subscriptions yet" (link to `/sources`) and "no items yet" (encouraging copy) gracefully. These are easy to forget and look bad when first encountered.
+- **Empty states:** Handle "no subscriptions yet" (link to `/subscriptions`) and "no items yet" (encouraging copy) gracefully. These are easy to forget and look bad when first encountered.
 
 **What to test (Tier 2 — nice-to-have):**
 - Handler status codes (200 / 302 / 401 / 404).

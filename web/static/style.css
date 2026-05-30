@@ -310,6 +310,97 @@ a:hover {
     }
 }
 
+/* ===== SUBSCRIPTIONS PAGE ===== */
+
+.page-header {
+    margin-bottom: 1.75rem;
+}
+
+.page-title {
+    font-family: var(--font-serif);
+    font-weight: 600;
+    font-size: 1.625rem;
+    letter-spacing: -0.01em;
+}
+
+.page-subtitle {
+    font-size: 0.9375rem;
+    color: var(--text-secondary);
+    margin-top: 0.25rem;
+}
+
+.add-form {
+    display: flex;
+    gap: 0.625rem;
+    margin-bottom: 2rem;
+}
+
+.add-input {
+    flex: 1;
+}
+
+.add-btn {
+    width: auto;
+    flex-shrink: 0;
+}
+
+.sub-list {
+    list-style: none;
+    border-top: 1px solid var(--border);
+}
+
+.sub-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem 0.25rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.sub-main {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    min-width: 0;
+}
+
+.sub-title {
+    font-weight: 600;
+    font-size: 1rem;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sub-meta {
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+}
+
+.status {
+    text-transform: capitalize;
+    font-weight: 500;
+}
+
+.status-ok { color: var(--success); }
+.status-pending { color: var(--text-muted); }
+.status-http_error,
+.status-parse_error,
+.status-timeout { color: var(--error); }
+
+.btn-ghost {
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px solid transparent;
+}
+
+.btn-ghost:hover {
+    background: var(--error-bg);
+    color: var(--error);
+}
+
 /* ===== RESPONSIVE ===== */
 
 @media (max-width: 480px) {
