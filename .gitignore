@@ -7,6 +7,9 @@
 # credentials
 .env
 
+# claude
+CLAUDE.md
+
 # compiled binaries (anchored to repo root so cmd/api/ stays tracked)
 /api
 /fetcher
