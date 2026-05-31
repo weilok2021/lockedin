@@ -4,6 +4,8 @@
 **Status:** Active
 **Tracked:** This document lives in the repo and is kept in sync with the implementation.
 
+> **⚠ Milestones 5–7 are restructured by [`2026-05-31-curated-multimodal-content-model.md`](2026-05-31-curated-multimodal-content-model.md).** The content model moved from topic→Google-News to a curated, multi-modal catalog (see the design doc dated 2026-05-31). The topic half of M5 retires, M6 carries the new schema/catalog/`source_type` work, and M7 becomes the catalog + blended reader. M0–M4, M8 (notifications), M9 (tests), and M10 (deploy) below are unchanged — follow them as written.
+
 ---
 
 ## How to read this plan
@@ -392,7 +394,9 @@ lockedin/
 **Done when:**
 - GET `/` shows the landing page (with login form) when logged out, the personalized feed when logged in.
 - Feed view shows items in reverse-chronological order, grouped by feed name or shown as a flat list (your call — the spec doesn't dictate).
-- Each item: feed name, title (linked to original URL, `target="_blank" rel="noopener"`), published date, optional excerpt from `content`.
+- Each item: feed name, title (linked to original URL, `target="_blank" rel="noopener"`), published date, and the `content` body rendered as fully as the source provides (sanitized via bluemonday — see below). The goal is to deliver readable content in-app, not just a teaser: feeds that carry full text (`content:encoded`) should read in-app; snippet-only sources (e.g. Google News) show what they give plus the title link out. **Content depth is a function of the source — see the content-acquisition note.**
+
+> **Content-acquisition note (open decision).** Google News RSS (the v1 topic provider) returns only a headline-link snippet, not article body, and its links are redirects. Delivering full in-app content therefore requires a source that provides it — the realistic levers are (a) supporting **direct full-content publisher feeds** alongside topic search, or (b) a **content-extraction step** that follows each item's link and pulls the readable body. Option (b) overlaps the deferred "scraping JS-rendered pages" non-goal and is fragile; option (a) revisits the one-topic-one-feed source model. Pick deliberately before building — do not silently ship snippet-only as the permanent reading experience.
 - `/subscriptions` page works as a UI, not just as JSON endpoints.
 - `/settings` page lets the user change their password.
 - Logout is a button somewhere visible.

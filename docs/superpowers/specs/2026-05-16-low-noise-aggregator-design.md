@@ -4,6 +4,8 @@
 **Date:** 2026-05-16
 **Tracked:** This document lives in the repo and is kept in sync with the implementation.
 
+> **⚠ Revised by [`2026-05-31-curated-multimodal-content-model-design.md`](2026-05-31-curated-multimodal-content-model-design.md).** The content model changed: topic→Google-News search was found unable to deliver readable content, so v1 moved to a **curated, multi-modal catalog** (article + youtube + podcast) that users follow source-by-source, and the "anti-engagement" thesis was corrected (the villain is junk, not engagement). The newer doc supersedes **§1 (thesis), §3 (non-goals), §5.2 (content tables), §6.4 (reading flow), and Milestone 7**. The rest of this spec — auth, multi-user model, architecture, email, deployment — still stands.
+
 ---
 
 ## 1. Background
@@ -11,6 +13,8 @@
 Modern content platforms (algorithmic social feeds, YouTube home, X timelines) are engineered for engagement. They reward addictive use rather than focused consumption. The user wants to stay current on trusted sources — engineering blogs (e.g., Boris Cherny on Claude Code), trusted YouTubers, specific Substacks — without subjecting themselves to the platforms' attention-hijacking surfaces.
 
 This project is a **personally-curated content aggregator**: the user adds specific sources they trust, the system pulls new items on a schedule, and delivers them through a low-friction surface (web page + email notification) that surfaces *only* what the user explicitly asked for.
+
+**What "low-noise" constrains — and what it does not.** The enemy is *manipulation and uncurated volume*: algorithmic ranking, clickbait, infinite scroll, engagement-maximizing notifications, content the user never asked for. It is **not** content depth. For a topic the user deliberately chose, delivering the full, readable article *is* signal — the product should provide content as completely as the source allows, not withhold it. The anti-addictive stance constrains the feed's *mechanics* (chronological only, no ranking, no endless scroll, at most one email per cycle); it never limits how much of a good article the user can read. Reducing content richness in the name of being "anti-addictive" is a category error.
 
 The project also serves as an applied capstone for the user's Boot.dev backend curriculum. The technology choices favor exercise of those skills (Go, Postgres, Docker, AWS) over the absolute minimum implementation cost.
 
