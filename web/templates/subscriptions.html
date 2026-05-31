@@ -1,15 +1,5 @@
 {{define "content"}}
-<nav class="app-nav">
-    <div class="app-nav-inner">
-        <a href="/" class="nav-brand">LockedIn</a>
-        <div class="nav-right">
-            <span class="nav-email">{{.Email}}</span>
-            <form method="POST" action="/logout" style="margin: 0;">
-                <button class="btn btn-outline btn-sm" type="submit">Sign out</button>
-            </form>
-        </div>
-    </div>
-</nav>
+{{template "appnav" .}}
 
 <main class="app-main">
     <header class="page-header">
@@ -21,7 +11,7 @@
     <div class="message message-success">Subscription added. New items will appear after the next fetch.</div>
     {{end}}
     {{if eq .Message "invalid"}}
-    <div class="message message-error">Couldn't load that topic — try different wording.</div>
+    <div class="message message-error">Couldn't load that topic. Try different wording.</div>
     {{end}}
     {{if eq .Message "removed"}}
     <div class="message message-info">Subscription removed.</div>
@@ -45,7 +35,7 @@
             <div class="sub-main">
                 <span class="sub-title">{{if .CustomTitle.Valid}}{{.CustomTitle.String}}{{else}}(untitled){{end}}</span>
                 <span class="sub-meta">
-                    via Google News ·
+                    via Google News
                     {{if .LastFetchStatus.Valid}}
                         <span class="status status-{{.LastFetchStatus.String}}">{{.LastFetchStatus.String}}</span>
                     {{else}}

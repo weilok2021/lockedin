@@ -63,6 +63,7 @@ func main() {
 	templates["login"] = template.Must(template.ParseFiles("web/templates/layout.html", "web/templates/login.html"))
 	templates["home"] = template.Must(template.ParseFiles("web/templates/layout.html", "web/templates/home.html"))
 	templates["subscriptions"] = template.Must(template.ParseFiles("web/templates/layout.html", "web/templates/subscriptions.html"))
+	templates["landing"] = template.Must(template.ParseFiles("web/templates/layout.html", "web/templates/landing.html"))
 
 	app := &App{
 		db:        db,
@@ -89,7 +90,7 @@ func main() {
 	mux.HandleFunc("POST /login", app.handlerLogin)
 	mux.HandleFunc("GET /verify", app.handlerVerifyEmail)
 	mux.HandleFunc("POST /logout", app.middlewareAuthorization(app.handlerLogout))
-	mux.HandleFunc("GET /", app.middlewareAuthorization(app.handlerHome))
+	mux.HandleFunc("GET /", app.handlerRoot)
 
 	// USER subscriptions
 	mux.HandleFunc("GET /subscriptions", app.middlewareAuthorization(app.handlerListSubscriptions))
@@ -111,6 +112,39 @@ func main() {
 func (a *App) handlerHealthz(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("ok\n"))
+}
+
+// handlerRoot serves the public landing page to logged-out visitors and the
+// personalized feed to logged-in users (spec §6.4). It does not redirect.
+func (a *App) handlerRoot(w http.ResponseWriter, r *http.Request) {
+	// no session: show the public landing page (do NOT redirect to /login)
+	user, ok := a.userFromSession(r)
+	if !ok {
+		a.templates["landing"].ExecuteTemplate(w, "layout", PageData{Title: "LockedIn"})
+		return
+	}
+	// logged in: stash the user in context and hand off to the feed handler
+	ctx := context.WithValue(r.Context(), userContextKey, user)
+	a.handlerHome(w, r.WithContext(ctx))
+}
+
+// userFromSession resolves the session cookie to a user without redirecting.
+// ok is false when there is no valid session (cookie missing, session or user not found).
+func (a *App) userFromSession(r *http.Request) (database.User, bool) {
+	// cookie -> session -> user; any miss returns ok=false instead of redirecting
+	sessionCookie, err := r.Cookie("session")
+	if err != nil {
+		return database.User{}, false
+	}
+	session, err := a.queries.GetSession(r.Context(), sessionCookie.Value)
+	if err != nil {
+		return database.User{}, false
+	}
+	user, err := a.queries.GetUserByID(r.Context(), session.UserID)
+	if err != nil {
+		return database.User{}, false
+	}
+	return user, true
 }
 
 func (a *App) handlerHome(w http.ResponseWriter, r *http.Request) {

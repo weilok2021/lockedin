@@ -4,11 +4,70 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{.Title}} — LockedIn</title>
+    <title>{{.Title}} · LockedIn</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
     {{template "content" .}}
 </body>
 </html>
+{{end}}
+
+{{/* Shared authenticated top bar. Active tab derives from .Title (no new fields). */}}
+{{define "appnav"}}
+<nav class="app-nav">
+    <div class="app-nav-inner">
+        <a href="/" class="nav-brand">Locked<span class="wm-in">In</span></a>
+        <div class="nav-right">
+            <div class="nav-links">
+                <a href="/" class="nav-link{{if eq .Title "Home"}} is-active{{end}}">Feed</a>
+                <a href="/subscriptions" class="nav-link{{if eq .Title "Subscriptions"}} is-active{{end}}">Subscriptions</a>
+            </div>
+            <span class="nav-divider"></span>
+            <div class="nav-account">
+                {{if .Email}}<span class="nav-avatar" title="{{.Email}}">{{slice .Email 0 1}}</span>{{end}}
+                <form method="POST" action="/logout" class="nav-logout-form">
+                    <button class="nav-logout" type="submit">Sign out</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</nav>
+{{end}}
+
+{{/* Shared empty-feed state (type-led, style C). Used by home + future feed.
+     Topic chips POST to the existing /subscriptions handler (no backend change). */}}
+{{define "feedempty"}}
+<div class="feed-empty">
+    <div class="feed-empty-rule"></div>
+    <div class="feed-empty-kicker"><span class="pip"></span> No new items yet</div>
+    <h1 class="feed-empty-title">Your reading room is <em>quiet.</em></h1>
+    <p class="feed-empty-text">
+        Nothing's arrived because you haven't followed anything yet. Pick a topic and new
+        writing will gather here, quietly, with no algorithm deciding for you.
+    </p>
+
+    <div class="starter">
+        <div class="starter-label">Start with a topic</div>
+        <div class="starter-chips">
+            <form method="POST" action="/subscriptions" class="chip-form"><input type="hidden" name="topic" value="Claude Code"><button class="chip" type="submit"><span class="plus">+</span> Claude Code</button></form>
+            <form method="POST" action="/subscriptions" class="chip-form"><input type="hidden" name="topic" value="Go"><button class="chip" type="submit"><span class="plus">+</span> Go</button></form>
+            <form method="POST" action="/subscriptions" class="chip-form"><input type="hidden" name="topic" value="Postgres"><button class="chip" type="submit"><span class="plus">+</span> Postgres</button></form>
+            <form method="POST" action="/subscriptions" class="chip-form"><input type="hidden" name="topic" value="Self-hosting"><button class="chip" type="submit"><span class="plus">+</span> Self-hosting</button></form>
+            <form method="POST" action="/subscriptions" class="chip-form"><input type="hidden" name="topic" value="AI agents"><button class="chip" type="submit"><span class="plus">+</span> AI agents</button></form>
+            <form method="POST" action="/subscriptions" class="chip-form"><input type="hidden" name="topic" value="Docker"><button class="chip" type="submit"><span class="plus">+</span> Docker</button></form>
+            <form method="POST" action="/subscriptions" class="chip-form"><input type="hidden" name="topic" value="Distributed systems"><button class="chip" type="submit"><span class="plus">+</span> Distributed systems</button></form>
+        </div>
+        <div class="starter-or">or follow your own</div>
+        <form method="POST" action="/subscriptions" class="starter-search">
+            <input class="form-input" type="text" name="topic" placeholder="e.g. type theory, observability…" required>
+            <button class="btn btn-primary" type="submit">Follow</button>
+        </form>
+    </div>
+
+    <div class="feed-empty-foot"><span class="pip"></span> Once you follow something, new items land here every 30 minutes, and the page always ends.</div>
+</div>
 {{end}}
