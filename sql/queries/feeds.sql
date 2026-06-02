@@ -6,3 +6,5 @@ SET title = EXCLUDED.title,
     site_url = EXCLUDED.site_url
 RETURNING *;
 
+-- name: ListFeeds :many
+SELECT * FROM feeds;

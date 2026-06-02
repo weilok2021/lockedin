@@ -10,6 +10,44 @@ import (
 	"database/sql"
 )
 
+const listFeeds = `-- name: ListFeeds :many
+SELECT id, feed_url, title, site_url, etag, last_modified, last_fetched_at, last_fetch_status, last_fetch_error, created_at FROM feeds
+`
+
+func (q *Queries) ListFeeds(ctx context.Context) ([]Feed, error) {
+	rows, err := q.db.QueryContext(ctx, listFeeds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Feed
+	for rows.Next() {
+		var i Feed
+		if err := rows.Scan(
+			&i.ID,
+			&i.FeedUrl,
+			&i.Title,
+			&i.SiteUrl,
+			&i.Etag,
+			&i.LastModified,
+			&i.LastFetchedAt,
+			&i.LastFetchStatus,
+			&i.LastFetchError,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const upsertFeed = `-- name: UpsertFeed :one
 INSERT INTO feeds(id, feed_url, title, site_url)
 VALUES(gen_random_uuid(), $1, $2, $3)
