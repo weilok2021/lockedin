@@ -468,7 +468,7 @@ func responseWithError(w http.ResponseWriter, status int, msg string, rootCause 
 }
 
 func (a *App) handlerDevReset(w http.ResponseWriter, r *http.Request) {
-	tables := []string{"email_tokens", "sessions", "item_notifications", "user_subscriptions", "items", "feeds", "users"}
+	tables := []string{"email_tokens", "sessions", "item_notifications", "user_subscriptions", "items", "feeds"}
 	for _, t := range tables {
 		if _, err := a.db.ExecContext(r.Context(), "DELETE FROM "+t); err != nil {
 			responseWithError(w, http.StatusInternalServerError, "Failed to reset "+t, err)
@@ -476,5 +476,5 @@ func (a *App) handlerDevReset(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("all tables reset\n"))
+	w.Write([]byte("all tables reset except users table\n"))
 }

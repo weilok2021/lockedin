@@ -13,3 +13,6 @@ CLAUDE.md
 # compiled binaries (anchored to repo root so cmd/api/ stays tracked)
 /api
 /fetcher
+
+# throwaway design mockups & previews (brainstorming only)
+/mockups/
