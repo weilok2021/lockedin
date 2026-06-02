@@ -26,10 +26,10 @@ Same convention as `2026-05-16-low-noise-aggregator-implementation.md`: **mentor
 
 **Files:** Create `sql/schema/000008_multimodal_columns.sql` (goose format).
 
-- [ ] Write the `+goose Up`: on `feeds`, add `source_type text NOT NULL DEFAULT 'article' CHECK (source_type IN ('article','youtube','podcast'))`, plus nullable `category text` and `description text`. On `items`, **rename `content` → `summary`** (it's the card blurb now, not a full body) and add nullable `image_url text` (the card thumbnail). (Rationale: spec §4. `media_url`/`media_type` playback fields are deferred — not in this migration.)
-- [ ] Write the matching `+goose Down` (reverse order): drop `items.image_url`, rename `summary` back to `content`, then drop the three `feeds` columns. *(Note: in Postgres a `RENAME COLUMN` can't be combined with `ADD`/`DROP` in one `ALTER` — make it its own statement.)*
-- [ ] Run `goose -dir sql/schema postgres "$DB_URL" up`.
-- [ ] Verify with `psql "$DB_URL" -c "\d feeds"` and `\d items` — confirm the columns and the CHECK constraint exist.
+- [x] Write the `+goose Up`: on `feeds`, add `source_type text NOT NULL DEFAULT 'article' CHECK (source_type IN ('article','youtube','podcast'))`, plus nullable `category text` and `description text`. On `items`, **rename `content` → `summary`** (it's the card blurb now, not a full body) and add nullable `image_url text` (the card thumbnail). (Rationale: spec §4. `media_url`/`media_type` playback fields are deferred — not in this migration.)
+- [x] Write the matching `+goose Down` (reverse order): drop `items.image_url`, rename `summary` back to `content`, then drop the three `feeds` columns. *(Note: in Postgres a `RENAME COLUMN` can't be combined with `ADD`/`DROP` in one `ALTER` — make it its own statement.)*
+- [x] Run `goose -dir sql/schema postgres "$DB_URL" up`.
+- [x] Verify with `psql "$DB_URL" -c "\d feeds"` and `\d items` — confirm the columns and the CHECK constraint exist.
 
 **Gotcha:** `ADD COLUMN … NOT NULL` needs the `DEFAULT 'article'` so existing rows backfill (they'll be cleared in Task 1.3 anyway). The CHECK is what makes `source_type` a safe discriminator — a typo'd value is rejected at write time.
 
@@ -37,9 +37,9 @@ Same convention as `2026-05-16-low-noise-aggregator-implementation.md`: **mentor
 
 **Files:** none by hand — `internal/database/*` is generated.
 
-- [ ] Run `sqlc generate`.
-- [ ] Confirm `database.Feed` now has `SourceType string`, `Category sql.NullString`, `Description sql.NullString`; and `database.Item` has `ImageUrl sql.NullString`.
-- [ ] Run `go build ./...` — should still compile (existing `InsertItemParams` is unchanged; new columns are nullable and not yet referenced).
+- [x] Run `sqlc generate`.
+- [x] Confirm `database.Feed` now has `SourceType string`, `Category sql.NullString`, `Description sql.NullString`; and `database.Item` has `ImageUrl sql.NullString`.
+- [x] Run `go build ./...` — should still compile (existing `InsertItemParams` is unchanged; new columns are nullable and not yet referenced).
 
 **Gotcha:** if gopls shows stale errors, trust `go build` + `go vet` over the editor — they re-index lazily (you hit this before).
 
@@ -47,10 +47,10 @@ Same convention as `2026-05-16-low-noise-aggregator-implementation.md`: **mentor
 
 **Files:** Create `sql/seed/catalog.sql`. Claude provides the SQL once feeds are verified.
 
-- [ ] **Sanity-check each candidate feed** — `curl -s <feed_url> | grep -oE "<item>|<entry>|<title>|media:thumbnail" | head` to confirm it has items and (ideally) a thumbnail field. Full body is NOT required now — cards need only title + link + summary + thumbnail. Strong starting candidates (match your interests): `https://simonwillison.net/atom/everything/` (LLM/AI/Claude-heavy), `https://jvns.ca/atom.xml` (Julia Evans), `https://danluu.com/atom.xml`. Curate for quality + a usable thumbnail.
-- [ ] Clear the old topic rows: `psql "$DB_URL" -c "TRUNCATE feeds CASCADE;"` (dev only — cascades to items + user_subscriptions).
-- [ ] Claude writes `catalog.sql`: `INSERT … ON CONFLICT (feed_url) DO UPDATE` rows with `feed_url`, `title`, `site_url`, `source_type='article'`, `category`, `description`. Run it via `psql "$DB_URL" -f sql/seed/catalog.sql`.
-- [ ] Verify: `psql "$DB_URL" -c "SELECT title, source_type, category FROM feeds;"`.
+- [x] **Sanity-check each candidate feed** — `curl -s <feed_url> | grep -oE "<item>|<entry>|<title>|media:thumbnail" | head` to confirm it has items and (ideally) a thumbnail field. Full body is NOT required now — cards need only title + link + summary + thumbnail. Strong starting candidates (match your interests): `https://simonwillison.net/atom/everything/` (LLM/AI/Claude-heavy), `https://jvns.ca/atom.xml` (Julia Evans), `https://danluu.com/atom.xml`. Curate for quality + a usable thumbnail.
+- [x] Clear the old topic rows: `psql "$DB_URL" -c "TRUNCATE feeds CASCADE;"` (dev only — cascades to items + user_subscriptions).
+- [x] Claude writes `catalog.sql`: `INSERT … ON CONFLICT (feed_url) DO UPDATE` rows with `feed_url`, `title`, `site_url`, `source_type='article'`, `category`, `description`. Run it via `psql "$DB_URL" -f sql/seed/catalog.sql`.
+- [x] Verify: `psql "$DB_URL" -c "SELECT title, source_type, category FROM feeds;"`.
 
 **Gotcha:** `TRUNCATE … CASCADE` wipes items and everyone's subscriptions — fine in dev, never in prod.
 
@@ -58,9 +58,9 @@ Same convention as `2026-05-16-low-noise-aggregator-implementation.md`: **mentor
 
 **Files:** `cmd/fetcher/main.go` — extend the item mapping to populate the summary (strip tags from `item.Description`) and `image_url` (spec §7 extraction order). *(The one bit of fetcher code Phase 1 touches — you implement, I review.)*
 
-- [ ] `go run ./cmd/fetcher`.
-- [ ] Verify the card fields: `psql "$DB_URL" -c "SELECT count(*) AS total, count(image_url) AS with_thumb, count(summary) AS with_summary FROM items;"`.
-- [ ] Spot-check one: `psql "$DB_URL" -t -c "SELECT left(summary,160), image_url FROM items ORDER BY fetched_at DESC LIMIT 1;"` — summary is short plain text (no HTML tags); `image_url` is an http(s) URL or empty.
+- [x] `go run ./cmd/fetcher`.
+- [x] Verify the card fields: `psql "$DB_URL" -c "SELECT count(*) AS total, count(image_url) AS with_thumb, count(summary) AS with_summary FROM items;"`.
+- [x] Spot-check one: `psql "$DB_URL" -t -c "SELECT left(summary,160), image_url FROM items ORDER BY fetched_at DESC LIMIT 1;"` — summary is short plain text (no HTML tags); `image_url` is an http(s) URL or empty.
 
 **Done when:** items carry title, url, a clean summary, and (where the feed provides one) a thumbnail.
 
@@ -70,31 +70,31 @@ Same convention as `2026-05-16-low-noise-aggregator-implementation.md`: **mentor
 
 **Goal:** A user browses the catalog, follows individual sources, and gets an appealing chronological feed of preview cards that link out to the source.
 
-### Task 2.1 — `ListCatalogForUser` query
+### Task 2.1 — Catalog queries ✅
 
-**Files:** Modify `sql/queries/feeds.sql` (Claude provides; shape in spec §6).
+**Files:** Modify `sql/queries/feeds.sql`.
 
-- [ ] Add `ListCatalogForUser :many` (the `feeds LEFT JOIN user_subscriptions … is_following` query). `sqlc generate`.
-- [ ] Confirm the generated row type has `IsFollowing bool` plus the feed display columns.
+- [x] Added `ListCatalog :many` (all feeds, ordered) **and** `ListFollowedFeedIDs :many` (the user's followed feed_ids). `sqlc generate`. *(Used a two-query + Go-map approach instead of a single `LEFT JOIN … is_following` — the handler correlates them. Chosen for readability over conciseness.)*
+- [x] Confirmed `ListCatalog` returns `[]Feed` and `ListFollowedFeedIDs` returns `[]uuid.UUID`.
 
-### Task 2.2 — Simplify the follow handler; retire the topic provider
+### Task 2.2 — Simplify the follow handler ✅
 
-**Files:** Modify `cmd/api/main.go` (`handlerCreateSubscription`). Delete `internal/feeds/topic.go` + `internal/feeds/topic_test.go`.
+**Files:** Modify `cmd/api/main.go` (`handlerCreateSubscription`).
 
-- [ ] **Contract (you implement):** `POST /subscriptions` reads a `feed_id` form value (hidden input from the catalog), parses it to `uuid.UUID`, gets the user from context, calls `CreateUserSubscription(user.ID, feedID)` with `custom_title` left NULL, redirects to `/catalog?msg=followed`. No `FeedURLForTopic`, no gofeed call.
-- [ ] Delete the topic provider files once nothing references them; `go build ./...` confirms.
+- [x] **Done:** `POST /subscriptions/{feed_id}` reads `feed_id` via `r.PathValue` (path param — symmetric with the delete route, not a hidden form field), parses to `uuid.UUID`, gets the user, calls `CreateUserSubscription(user.ID, feedID)` with `custom_title` NULL, redirects to `/catalog?msg=added`. No `FeedURLForTopic`, no gofeed call.
+- [ ] ~~Delete the topic provider~~ — **kept on purpose.** The old topic handler is commented out and `FeedURLForTopic`/`UpsertFeed` are retained to power the planned **v1 topic-search "Discover" path** (see Task 2.7). So the provider is *not* retired.
 
-**Gotchas:** invalid/missing `feed_id` → redirect with an error msg (3xx, not 500 — your earlier lesson). `CreateUserSubscription` is already idempotent (`ON CONFLICT DO NOTHING`), so a double-follow is harmless.
+**Gotchas:** invalid/missing `feed_id` → redirect with an error msg (3xx, not 500). `CreateUserSubscription` is idempotent (`ON CONFLICT DO NOTHING`), so a double-follow is harmless.
 
-### Task 2.3 — Catalog page
+### Task 2.3 — Catalog page ✅
 
-**Files:** Modify `cmd/api/main.go` (new `handlerBrowseCatalog` + route, register template). Claude writes `web/templates/catalog.html` + CSS.
+**Files:** `cmd/api/main.go` (`handlerBrowseCatalog` + route, template registration); `web/templates/catalog.html` + CSS.
 
-- [ ] **Contract (you implement):** `GET /catalog` (auth-wrapped) → get user from context → `ListCatalogForUser(user.ID)` → render the catalog template with the rows.
-- [ ] Register `GET /catalog` and the `catalog` template in `main()` (remember: an unregistered template = nil-map panic — your earlier bug).
-- [ ] Claude writes the template: per row show title, description, category, a `source_type` badge, and a **Follow** form (`POST /subscriptions` + hidden `feed_id`) or **Following ✓ / Unfollow** (`POST /subscriptions/{feed_id}/delete`) based on `is_following`.
+- [x] `GET /catalog` (auth-wrapped) → `ListCatalog` + `ListFollowedFeedIDs` → build `[]CatalogCard{Feed, IsFollowing}` via a Go map of followed ids → render the `catalog` template.
+- [x] Registered `GET /catalog` and the `catalog` template in `main()`.
+- [x] Template: per row shows title, description, category, a `source_type` tag, and a **Follow** form (`POST /subscriptions/{feed_id}`) or **Following ✓** (`POST /subscriptions/{feed_id}/delete`) based on `IsFollowing`. Added a Catalog nav tab.
 
-**Done when:** `/catalog` lists every curated source and you can follow/unfollow, with the button reflecting state.
+**Done when:** `/catalog` lists every curated source and you can follow/unfollow, with the button reflecting state. ✅
 
 ### Task 2.4 — `ListItemsForUser` query
 
@@ -113,6 +113,22 @@ Same convention as `2026-05-16-low-noise-aggregator-implementation.md`: **mentor
 **Gotchas (security):** the summary renders as an auto-escaped string — do NOT wrap it in `template.HTML`. Validate the `image_url` scheme before emitting `<img>`. Outbound links use `rel="noopener noreferrer"`.
 
 **Done when:** logged in, `/` shows an appealing chronological feed of preview cards; clicking one opens the source in a new tab. **This is the milestone payoff — a working curated card feed.**
+
+### Task 2.6 — Subscriptions page → source model ✅ (added scope)
+
+Not in the original plan, but required once follows became `feed_id`-based: the old `/subscriptions` page showed the topic `custom_title` (now NULL) and a hardcoded "via Google News".
+
+- [x] `ListUserSubscriptions` now returns `f.title`, `u.custom_title`, `f.source_type`, `f.category`, `f.last_fetch_status`. `sqlc generate`.
+- [x] `subscriptions.html` shows the real source name (prefers `custom_title`, else `f.title`), a `source_type` tag, fetch status, and **Unfollow**; the topic add-form is gone; empty-state links to `/catalog`.
+- Note: status shows "pending" until **Phase 3** writes `last_fetch_status` back.
+
+### Task 2.7 — Topic-search "Discover" path (planned, v1 — added scope)
+
+Decided mid-Phase-2: keep topic search **in v1** (not deferred to v2), alongside the curated catalog.
+
+- [ ] Migration: add `curated boolean NOT NULL DEFAULT false` to `feeds`; the seed sets it `true`; `ListCatalog` filters `WHERE curated = true` so ad-hoc topic feeds don't pollute the browse list.
+- [ ] Second handler/route (e.g. `POST /discover` with a `topic`): restore the commented topic flow — `FeedURLForTopic` → gofeed validate → `UpsertFeed` (`curated=false`) → `CreateUserSubscription`.
+- [ ] Mark topic results as "Discover" (unvetted) in the UI, distinct from curated sources.
 
 ---
 
