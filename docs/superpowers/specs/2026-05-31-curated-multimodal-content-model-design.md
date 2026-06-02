@@ -4,7 +4,7 @@
 **Date:** 2026-05-31
 **Revises:** `2026-05-16-low-noise-aggregator-design.md` — specifically §1 (thesis), §3 (non-goals), §5.2 (content tables), §6.4 (reading flow), and Milestone 7. Everything else in the original spec (auth, multi-user model, architecture, email, deployment) still stands.
 
-**The model in one line:** a curated, multi-platform feed of **appealing preview cards that link out**. The app curates trusted sources (blogs/Substacks, YouTube channels, podcasts); users follow individual sources; the reader shows a chronological feed of cards (thumbnail + title + source + short excerpt) that open the **source platform** to read/watch/listen. Nothing is republished in-app — Lockedin is a curated *front door*, which keeps it clear of content-ownership/copyright and free-tier limits.
+**The model in one line:** a curated, multi-platform feed of **appealing preview cards that link out**. The app curates trusted sources (blogs/Substacks, YouTube channels, podcasts); users follow individual sources; the reader shows a chronological feed of cards (thumbnail + title + source + short summary) that open the **source platform** to read/watch/listen. Nothing is republished in-app — Lockedin is a curated *front door*, which keeps it clear of content-ownership/copyright and free-tier limits.
 
 ---
 
@@ -41,9 +41,9 @@ The original spec framed the product as *anti-engagement / anti-addictive*. That
 
 1. **Curated catalog, not free-text search.** The *app* owns a curated catalog of trusted sources. Users never provide URLs.
 2. **Source-as-unit subscription.** Users browse the catalog and follow *individual sources/creators* (like channel subscriptions), not topic bundles. Reuses the existing `user_subscriptions(user_id, feed_id)` join almost as-is.
-3. **Read on the source — link-out preview cards.** The reader never republishes article bodies, audio, or video. Each item is a card (thumbnail + title + source + short excerpt) that links to the origin platform. This is the simplest path and sidesteps content-ownership/copyright and free-tier limits.
+3. **Read on the source — link-out preview cards.** The reader never republishes article bodies, audio, or video. Each item is a card (thumbnail + title + source + short summary) that links to the origin platform. This is the simplest path and sidesteps content-ownership/copyright and free-tier limits.
 4. **Multi-modal by design, one modality at a time in build.** A single discriminator (`source_type`: `article`, `youtube`, `podcast`) drives **card styling** and thumbnail extraction. v1 *implements* `article` first; podcast/youtube are additive.
-5. **One pipeline.** Blogs, YouTube channels, and podcasts are all RSS, so the existing `ListFeeds → parse → insert` fetcher serves all of them. The only per-kind difference is *thumbnail/excerpt extraction* (fetch) and *card styling* (web).
+5. **One pipeline.** Blogs, YouTube channels, and podcasts are all RSS, so the existing `ListFeeds → parse → insert` fetcher serves all of them. The only per-kind difference is *thumbnail/summary extraction* (fetch) and *card styling* (web).
 
 ## 4. Data model
 
@@ -62,13 +62,13 @@ Migration on existing rows: `source_type DEFAULT 'article'` (existing Google-New
 ```
 image_url    text   -- preview thumbnail for the card (feed-provided); nullable
 ```
-`items.content` is **repurposed as the card excerpt** — a short plain-text summary, not a full body. It already exists; only its meaning narrows.
+`items.content` is **renamed to `summary`** — a short plain-text blurb for the card, not a full body. (A column rename in this migration, not a new column.)
 
 **Not added (deferred):** `media_url` / `media_type` for in-app audio/video playback. The link-out model doesn't need them; add only if a future version embeds playback in-app.
 
 **Unchanged:** `items.url` (the outbound link — the whole point), `items.guid`/`UNIQUE (feed_id, guid)` dedupe, `user_subscriptions(user_id, feed_id)`.
 
-**The rule:** same for every item in a feed → on `feeds` (`source_type`); different per item → on `items` (`image_url`, excerpt). `source_type` tells the code how to *style the card*.
+**The rule:** same for every item in a feed → on `feeds` (`source_type`); different per item → on `items` (`image_url`, summary). `source_type` tells the code how to *style the card*.
 
 ## 5. The catalog & seeding
 
@@ -81,7 +81,7 @@ The catalog **is** the `feeds` table — since users can only follow app-curated
 - The topic provider (`internal/feeds/topic.go` + tests) and the topic half of `handlerCreateSubscription` retire — replaced by "follow a catalog source by `feed_id`."
 - Once seeded, the fetcher finds catalog sources automatically — `ListFeeds` already returns every feed.
 
-**Source verification is now easy:** because cards need only title + link + excerpt + thumbnail (not a full body), almost any RSS feed qualifies. Curate for *quality and a usable thumbnail*, not for `content:encoded`.
+**Source verification is now easy:** because cards need only title + link + summary + thumbnail (not a full body), almost any RSS feed qualifies. Curate for *quality and a usable thumbnail*, not for `content:encoded`.
 
 ## 6. Browse & follow flow
 
@@ -116,7 +116,7 @@ The fetch loop is unchanged. The only addition is a mapper that extracts the car
 ```go
 func itemParams(feed database.Feed, item *gofeed.Item) database.InsertItemParams {
     // common to all kinds: title, url (item.Link), guid (fallback item.Link), published_at
-    // content  = short plain-text excerpt   (strip tags from item.Description / item.Content)
+    // summary  = short plain-text blurb     (strip tags from item.Description / item.Content)
     // image_url = best available thumbnail   (see below; varies by source_type)
 }
 ```
@@ -128,7 +128,7 @@ func itemParams(feed database.Feed, item *gofeed.Item) database.InsertItemParams
 - first `<img>` in the content body (blogs)
 - else NULL → the card renders a placeholder / source badge
 
-**Excerpt (`content`):** take `item.Description` (or `item.Content`), strip HTML to plain text, keep it short. `source_type` mainly informs *which thumbnail field to prefer*; the rest of the mapping is uniform across kinds.
+**Summary (`summary`):** take `item.Description` (or `item.Content`), strip HTML to plain text, keep it short. `source_type` mainly informs *which thumbnail field to prefer*; the rest of the mapping is uniform across kinds.
 
 `fetchFeed` takes the `database.Feed` row (so it has `source_type`); `ListFeeds` already returns it.
 
@@ -141,7 +141,7 @@ A single chronological list of **preview cards** across all followed sources; cl
 **New query:**
 ```sql
 -- ListItemsForUser
-SELECT i.id, i.title, i.url, i.content, i.image_url, i.published_at,
+SELECT i.id, i.title, i.url, i.summary, i.image_url, i.published_at,
        f.title AS source_title, f.source_type
 FROM items i
 INNER JOIN user_subscriptions s ON s.feed_id = i.feed_id AND s.user_id = $1
@@ -158,7 +158,7 @@ LIMIT $2 OFFSET $3;
     <div class="card-body">
       <span class="card-source">{{.SourceTitle}} · {{.PublishedAt}}</span>
       <h2 class="card-title">{{.Title}}</h2>
-      <p class="card-excerpt">{{.Excerpt}}</p>
+      <p class="card-summary">{{.Summary}}</p>
     </div>
   </a>
 {{end}}
@@ -166,14 +166,14 @@ LIMIT $2 OFFSET $3;
 `source_type` adds affordances via CSS/markup: a play-triangle over `youtube` thumbnails, a "Listen" badge on `podcast`, plain image on `article`.
 
 **Security — much simpler than rendering full bodies:**
-- **Excerpt is plain text.** Tags are stripped at fetch time and `html/template` auto-escapes the string. No raw HTML rendered → no bluemonday, no `template.HTML`, no XSS surface from bodies.
+- **Summary is plain text.** Tags are stripped at fetch time and `html/template` auto-escapes the string. No raw HTML rendered → no bluemonday, no `template.HTML`, no XSS surface from bodies.
 - **Validate `image_url` is `http(s)`** before emitting `<img src>` (reject `javascript:`/`data:` etc.); if invalid/NULL, render the placeholder.
 - **Outbound link** uses `target="_blank" rel="noopener noreferrer"`.
 
 ## 9. Testing
 
-- **`itemParams` mapper** — unit tests (per the existing `topic_test.go` style): guid-fallback, excerpt tag-stripping, thumbnail field-preference per `source_type`, nullable handling.
-- **Excerpt/`image_url` safety** — excerpt contains no markup after mapping; `image_url` with a non-`http(s)` scheme is rejected/blanked.
+- **`itemParams` mapper** — unit tests (per the existing `topic_test.go` style): guid-fallback, summary tag-stripping, thumbnail field-preference per `source_type`, nullable handling.
+- **Summary/`image_url` safety** — summary contains no markup after mapping; `image_url` with a non-`http(s)` scheme is rejected/blanked.
 - **Queries** (DB-backed): `ListCatalogForUser` (`is_following` correctness), `ListItemsForUser` (user scoping, ordering).
 - **Handlers** (`httptest`): follow creates a subscription, unfollow deletes it, per-user isolation (user A's feed never shows user B's items).
 
@@ -181,8 +181,8 @@ LIMIT $2 OFFSET $3;
 
 **Phase 1 — items become cards:**
 1. Migration (`feeds`: `source_type`, `category`, `description`; `items`: `image_url`) → `sqlc generate`.
-2. Seed SQL: clear Google-News rows; insert 2–3 curated **article** sources (curate for quality + a usable thumbnail/excerpt — full body not required).
-3. Run fetcher manually → confirm items have title, url, excerpt, and (where available) `image_url`.
+2. Seed SQL: clear Google-News rows; insert 2–3 curated **article** sources (curate for quality + a usable thumbnail/summary — full body not required).
+3. Run fetcher manually → confirm items have title, url, summary, and (where available) `image_url`.
 
 **Phase 2 — follow + read (the payoff):**
 4. Simplify `POST /subscriptions` to `feed_id`; retire the topic provider.

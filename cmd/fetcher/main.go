@@ -3,8 +3,10 @@ package main
 import (
 	"context"
 	"database/sql"
-	"fmt"
+	"html"
 	"log"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -92,18 +94,20 @@ func (f *Fetcher) fetchFeed(ctx context.Context, feedID uuid.UUID, feedURL strin
 			guid = item.Link
 		}
 
-		body := item.Content
-		if body == "" {
-			body = item.Description
+		text := item.Description
+		if text == "" {
+			text = item.Content
 		}
+		summary := plainText(text, 200)
+
 		if err := f.queries.InsertItem(ctx, database.InsertItemParams{
 			FeedID: feedID,
 			Guid:   guid,
 			Url:    item.Link,
 			Title:  item.Title,
-			Content: sql.NullString{
-				String: body,
-				Valid:  body != "", // valid=true when content is not an empty string
+			Summary: sql.NullString{
+				String: summary,
+				Valid:  summary != "", // valid=true when content is not an empty string
 			},
 			Author:      author,
 			PublishedAt: publishedAt,
@@ -111,7 +115,25 @@ func (f *Fetcher) fetchFeed(ctx context.Context, feedID uuid.UUID, feedURL strin
 			log.Printf("insert item %q: %v", item.Title, err)
 			continue
 		}
-		fmt.Println("item has been fetched: " + item.Description)
 	}
 	return nil
+}
+
+// htmlTagRe matches HTML tags so they can be stripped from feed text.
+var htmlTagRe = regexp.MustCompile(`<[^>]*>`)
+
+// plainText turns a feed's HTML summary/body (item.Description or item.Content)
+// into a short, clean plain-text blurb for a card.
+//
+// Order matters: strip tags BEFORE unescaping entities, so entity-encoded text
+// like "&lt;dl&gt;" survives as the literal "<dl>" instead of being decoded to a
+// real-looking tag and then removed. max is a rune count, not bytes.
+func plainText(s string, max int) string {
+	s = htmlTagRe.ReplaceAllString(s, " ")   // 1. strip real HTML tags
+	s = html.UnescapeString(s)               // 2. decode entities (&lt; -> <, &amp; -> &)
+	s = strings.Join(strings.Fields(s), " ") // 3. collapse whitespace runs, trim ends
+	if r := []rune(s); len(r) > max {        // 4. truncate rune-safely, add an ellipsis
+		s = strings.TrimRight(string(r[:max]), " ") + "…"
+	}
+	return s
 }

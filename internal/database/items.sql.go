@@ -13,7 +13,7 @@ import (
 )
 
 const insertItem = `-- name: InsertItem :exec
-INSERT INTO items(id, feed_id, guid, url, title, content, author, published_at)
+INSERT INTO items(id, feed_id, guid, url, title, summary, author, published_at)
 VALUES(gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7)
 ON CONFLICT(feed_id, guid)
 DO NOTHING
@@ -24,7 +24,7 @@ type InsertItemParams struct {
 	Guid        string
 	Url         string
 	Title       string
-	Content     sql.NullString
+	Summary     sql.NullString
 	Author      sql.NullString
 	PublishedAt sql.NullTime
 }
@@ -35,7 +35,7 @@ func (q *Queries) InsertItem(ctx context.Context, arg InsertItemParams) error {
 		arg.Guid,
 		arg.Url,
 		arg.Title,
-		arg.Content,
+		arg.Summary,
 		arg.Author,
 		arg.PublishedAt,
 	)

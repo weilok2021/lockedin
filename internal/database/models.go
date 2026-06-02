@@ -30,6 +30,9 @@ type Feed struct {
 	LastFetchStatus sql.NullString
 	LastFetchError  sql.NullString
 	CreatedAt       time.Time
+	SourceType      string
+	Category        sql.NullString
+	Description     sql.NullString
 }
 
 type Item struct {
@@ -38,10 +41,11 @@ type Item struct {
 	Guid        string
 	Url         string
 	Title       string
-	Content     sql.NullString
+	Summary     sql.NullString
 	Author      sql.NullString
 	PublishedAt sql.NullTime
 	FetchedAt   time.Time
+	ImageUrl    sql.NullString
 }
 
 type ItemNotification struct {

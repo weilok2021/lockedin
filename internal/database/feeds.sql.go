@@ -11,7 +11,7 @@ import (
 )
 
 const listFeeds = `-- name: ListFeeds :many
-SELECT id, feed_url, title, site_url, etag, last_modified, last_fetched_at, last_fetch_status, last_fetch_error, created_at FROM feeds
+SELECT id, feed_url, title, site_url, etag, last_modified, last_fetched_at, last_fetch_status, last_fetch_error, created_at, source_type, category, description FROM feeds
 `
 
 func (q *Queries) ListFeeds(ctx context.Context) ([]Feed, error) {
@@ -34,6 +34,9 @@ func (q *Queries) ListFeeds(ctx context.Context) ([]Feed, error) {
 			&i.LastFetchStatus,
 			&i.LastFetchError,
 			&i.CreatedAt,
+			&i.SourceType,
+			&i.Category,
+			&i.Description,
 		); err != nil {
 			return nil, err
 		}
@@ -54,7 +57,7 @@ VALUES(gen_random_uuid(), $1, $2, $3)
 ON CONFLICT (feed_url) DO UPDATE
 SET title = EXCLUDED.title,
     site_url = EXCLUDED.site_url
-RETURNING id, feed_url, title, site_url, etag, last_modified, last_fetched_at, last_fetch_status, last_fetch_error, created_at
+RETURNING id, feed_url, title, site_url, etag, last_modified, last_fetched_at, last_fetch_status, last_fetch_error, created_at, source_type, category, description
 `
 
 type UpsertFeedParams struct {
@@ -77,6 +80,9 @@ func (q *Queries) UpsertFeed(ctx context.Context, arg UpsertFeedParams) (Feed, e
 		&i.LastFetchStatus,
 		&i.LastFetchError,
 		&i.CreatedAt,
+		&i.SourceType,
+		&i.Category,
+		&i.Description,
 	)
 	return i, err
 }
