@@ -46,17 +46,19 @@ func (q *Queries) DeleteUserSubscription(ctx context.Context, arg DeleteUserSubs
 }
 
 const listUserSubscriptions = `-- name: ListUserSubscriptions :many
-SELECT f.id AS feed_id, u.custom_title,  f.last_fetch_status 
-FROM user_subscriptions AS u
-INNER JOIN feeds AS f
-ON u.feed_id = f.id
-WHERE u.user_id = $1
-ORDER BY u.subscribed_at DESC
+SELECT f.id AS feed_id, f.title, u.custom_title, f.source_type, f.category, f.last_fetch_status
+  FROM user_subscriptions AS u
+  INNER JOIN feeds AS f ON u.feed_id = f.id
+  WHERE u.user_id = $1
+  ORDER BY u.subscribed_at DESC
 `
 
 type ListUserSubscriptionsRow struct {
 	FeedID          uuid.UUID
+	Title           sql.NullString
 	CustomTitle     sql.NullString
+	SourceType      string
+	Category        sql.NullString
 	LastFetchStatus sql.NullString
 }
 
@@ -69,7 +71,14 @@ func (q *Queries) ListUserSubscriptions(ctx context.Context, userID uuid.UUID) (
 	var items []ListUserSubscriptionsRow
 	for rows.Next() {
 		var i ListUserSubscriptionsRow
-		if err := rows.Scan(&i.FeedID, &i.CustomTitle, &i.LastFetchStatus); err != nil {
+		if err := rows.Scan(
+			&i.FeedID,
+			&i.Title,
+			&i.CustomTitle,
+			&i.SourceType,
+			&i.Category,
+			&i.LastFetchStatus,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

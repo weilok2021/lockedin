@@ -13,11 +13,9 @@ import (
 
 	"github.com/google/uuid"
 	_ "github.com/lib/pq"
-	"github.com/mmcdole/gofeed"
 	"github.com/weilok2021/lockedin/internal/auth"
 	"github.com/weilok2021/lockedin/internal/config"
 	"github.com/weilok2021/lockedin/internal/database"
-	"github.com/weilok2021/lockedin/internal/feeds"
 )
 
 type App struct {
@@ -27,11 +25,17 @@ type App struct {
 	templates map[string]*template.Template
 }
 
+type CatalogCard struct {
+	Feed        database.Feed
+	IsFollowing bool
+}
+
 type PageData struct {
 	Title         string
 	Message       string
 	Email         string
 	Subscriptions []database.ListUserSubscriptionsRow
+	Catalog       []CatalogCard // ← add this
 }
 
 // For middlewares and handlers to access to login user struct, (authorization)
@@ -63,6 +67,7 @@ func main() {
 	templates["login"] = template.Must(template.ParseFiles("web/templates/layout.html", "web/templates/login.html"))
 	templates["home"] = template.Must(template.ParseFiles("web/templates/layout.html", "web/templates/home.html"))
 	templates["subscriptions"] = template.Must(template.ParseFiles("web/templates/layout.html", "web/templates/subscriptions.html"))
+	templates["catalog"] = template.Must(template.ParseFiles("web/templates/layout.html", "web/templates/catalog.html"))
 	templates["landing"] = template.Must(template.ParseFiles("web/templates/layout.html", "web/templates/landing.html"))
 
 	app := &App{
@@ -94,8 +99,11 @@ func main() {
 
 	// USER subscriptions
 	mux.HandleFunc("GET /subscriptions", app.middlewareAuthorization(app.handlerListSubscriptions))
-	mux.HandleFunc("POST /subscriptions", app.middlewareAuthorization(app.handlerCreateSubscription))
+	mux.HandleFunc("POST /subscriptions/{feed_id}", app.middlewareAuthorization(app.handlerCreateSubscription))
 	mux.HandleFunc("POST /subscriptions/{feed_id}/delete", app.middlewareAuthorization(app.handlerDeleteSubscription))
+
+	// catalogs
+	mux.HandleFunc("GET /catalog", app.middlewareAuthorization(app.handlerBrowseCatalog))
 
 	if cfg.Environment == "development" {
 		mux.HandleFunc("POST /dev/reset", app.handlerDevReset)
@@ -375,43 +383,62 @@ func (a *App) handlerListSubscriptions(w http.ResponseWriter, r *http.Request) {
 // validates it's a real feed (one-shot fetch + parse),
 // upserts the feeds row, inserts user_subscriptions with the topic as custom_title.
 // Returns a clear error if the fetch/parse fails.
+
+// func (a *App) handlerCreateSubscription(w http.ResponseWriter, r *http.Request) {
+// 	topic := r.FormValue("topic")
+// 	feedURL, _, err := feeds.FeedURLForTopic(topic)
+// 	if err != nil {
+// 		http.Redirect(w, r, "/subscriptions?msg=invalid", http.StatusSeeOther)
+// 		return
+// 	}
+// 	fp := gofeed.NewParser()
+// 	fp.UserAgent = "Lockedin/0.1 (+https://github.com/weilok2021/lockedin)"
+
+// 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+// 	defer cancel()
+
+// 	fetchedFeed, err := fp.ParseURLWithContext(feedURL, ctx)
+// 	if err != nil {
+// 		http.Redirect(w, r, "/subscriptions?msg=invalid", http.StatusSeeOther)
+// 		return
+// 	}
+// 	dbFeed, err := a.queries.UpsertFeed(r.Context(), database.UpsertFeedParams{
+// 		FeedUrl: feedURL,
+// 		Title:   sql.NullString{String: fetchedFeed.Title, Valid: fetchedFeed.Title != ""},
+// 		SiteUrl: sql.NullString{String: fetchedFeed.Link, Valid: fetchedFeed.Link != ""},
+// 	})
+// 	if err != nil {
+// 		responseWithError(w, http.StatusInternalServerError, "Could not save subscription", err)
+// 		return
+// 	}
+// 	user := r.Context().Value(userContextKey).(database.User)
+// 	if err := a.queries.CreateUserSubscription(r.Context(), database.CreateUserSubscriptionParams{
+// 		UserID:      user.ID,
+// 		FeedID:      dbFeed.ID,
+// 		CustomTitle: sql.NullString{String: topic, Valid: true},
+// 	}); err != nil {
+// 		responseWithError(w, http.StatusInternalServerError, "Could not save subscription", err)
+// 		return
+// 	}
+// 	http.Redirect(w, r, "/subscriptions?msg=added", http.StatusSeeOther)
+// }
+
 func (a *App) handlerCreateSubscription(w http.ResponseWriter, r *http.Request) {
-	topic := r.FormValue("topic")
-	feedURL, _, err := feeds.FeedURLForTopic(topic)
+	feedID, err := uuid.Parse(r.PathValue("feed_id"))
 	if err != nil {
-		http.Redirect(w, r, "/subscriptions?msg=invalid", http.StatusSeeOther)
+		http.Redirect(w, r, "/catalog?msg=invalid", http.StatusSeeOther)
 		return
 	}
-	fp := gofeed.NewParser()
-	fp.UserAgent = "Lockedin/0.1 (+https://github.com/weilok2021/lockedin)"
 
-	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
-	defer cancel()
-
-	fetchedFeed, err := fp.ParseURLWithContext(feedURL, ctx)
-	if err != nil {
-		http.Redirect(w, r, "/subscriptions?msg=invalid", http.StatusSeeOther)
-		return
-	}
-	dbFeed, err := a.queries.UpsertFeed(r.Context(), database.UpsertFeedParams{
-		FeedUrl: feedURL,
-		Title:   sql.NullString{String: fetchedFeed.Title, Valid: fetchedFeed.Title != ""},
-		SiteUrl: sql.NullString{String: fetchedFeed.Link, Valid: fetchedFeed.Link != ""},
-	})
-	if err != nil {
-		responseWithError(w, http.StatusInternalServerError, "Could not save subscription", err)
-		return
-	}
 	user := r.Context().Value(userContextKey).(database.User)
 	if err := a.queries.CreateUserSubscription(r.Context(), database.CreateUserSubscriptionParams{
-		UserID:      user.ID,
-		FeedID:      dbFeed.ID,
-		CustomTitle: sql.NullString{String: topic, Valid: true},
+		UserID: user.ID,
+		FeedID: feedID,
 	}); err != nil {
 		responseWithError(w, http.StatusInternalServerError, "Could not save subscription", err)
 		return
 	}
-	http.Redirect(w, r, "/subscriptions?msg=added", http.StatusSeeOther)
+	http.Redirect(w, r, "/catalog?msg=added", http.StatusSeeOther)
 }
 
 func (a *App) handlerDeleteSubscription(w http.ResponseWriter, r *http.Request) {
@@ -429,6 +456,46 @@ func (a *App) handlerDeleteSubscription(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	http.Redirect(w, r, "/subscriptions?msg=removed", http.StatusSeeOther)
+}
+
+func (a *App) handlerBrowseCatalog(w http.ResponseWriter, r *http.Request) {
+	catalogs := []CatalogCard{}
+	user := r.Context().Value(userContextKey).(database.User)
+	feeds, err := a.queries.ListCatalog(r.Context())
+	if err != nil {
+		responseWithError(w, http.StatusInternalServerError, "Failed to list catalog", err)
+		return
+	}
+
+	feedIDs, err := a.queries.ListFollowedFeedIDs(r.Context(), user.ID)
+	if err != nil {
+		responseWithError(w, http.StatusInternalServerError, "Failed to list user followed feeds", err)
+		return
+	}
+
+	// Add all feeds into catalog
+	for _, feed := range feeds {
+		catalogs = append(catalogs, CatalogCard{
+			Feed:        feed,
+			IsFollowing: false,
+		})
+	}
+
+	// Update feeds in catalog to 'followed' if it is followed by user
+	for i, card := range catalogs {
+		for _, feedID := range feedIDs {
+			if card.Feed.ID == feedID {
+				catalogs[i].IsFollowing = true
+			}
+		}
+	}
+
+	a.templates["catalog"].ExecuteTemplate(w, "layout", PageData{
+		Title:   "Catalog",
+		Email:   user.Email,
+		Message: r.URL.Query().Get("msg"),
+		Catalog: catalogs,
+	})
 }
 
 // helper function to sends json response

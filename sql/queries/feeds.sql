@@ -8,3 +8,9 @@ RETURNING *;
 
 -- name: ListFeeds :many
 SELECT * FROM feeds;
+
+-- name: ListCatalog :many
+SELECT * FROM feeds ORDER BY category, title;
+
+-- name: ListFollowedFeedIDs :many
+SELECT feed_id FROM user_subscriptions WHERE user_id = $1;

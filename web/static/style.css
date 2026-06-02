@@ -633,6 +633,26 @@ a:hover { color: var(--clay-deeper); text-decoration: underline; text-underline-
 }
 .sub-remove { margin: 0; flex-shrink: 0; }
 
+/* catalog source description + source-type tag */
+.sub-desc {
+    font-size: 0.9rem;
+    color: var(--ink-soft);
+    line-height: 1.45;
+    margin-top: 0.15rem;
+    max-width: 60ch;
+}
+.tag {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.7rem;
+    font-weight: 500;
+    text-transform: capitalize;
+    padding: 0.1rem 0.5rem;
+    border-radius: var(--radius-pill);
+    color: var(--muted);
+    background: var(--surface-2);
+}
+
 /* status pill */
 .status {
     display: inline-flex;

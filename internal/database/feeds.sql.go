@@ -8,7 +8,50 @@ package database
 import (
 	"context"
 	"database/sql"
+
+	"github.com/google/uuid"
 )
+
+const listCatalog = `-- name: ListCatalog :many
+SELECT id, feed_url, title, site_url, etag, last_modified, last_fetched_at, last_fetch_status, last_fetch_error, created_at, source_type, category, description FROM feeds ORDER BY category, title
+`
+
+func (q *Queries) ListCatalog(ctx context.Context) ([]Feed, error) {
+	rows, err := q.db.QueryContext(ctx, listCatalog)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Feed
+	for rows.Next() {
+		var i Feed
+		if err := rows.Scan(
+			&i.ID,
+			&i.FeedUrl,
+			&i.Title,
+			&i.SiteUrl,
+			&i.Etag,
+			&i.LastModified,
+			&i.LastFetchedAt,
+			&i.LastFetchStatus,
+			&i.LastFetchError,
+			&i.CreatedAt,
+			&i.SourceType,
+			&i.Category,
+			&i.Description,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
 
 const listFeeds = `-- name: ListFeeds :many
 SELECT id, feed_url, title, site_url, etag, last_modified, last_fetched_at, last_fetch_status, last_fetch_error, created_at, source_type, category, description FROM feeds
@@ -41,6 +84,33 @@ func (q *Queries) ListFeeds(ctx context.Context) ([]Feed, error) {
 			return nil, err
 		}
 		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listFollowedFeedIDs = `-- name: ListFollowedFeedIDs :many
+SELECT feed_id FROM user_subscriptions WHERE user_id = $1
+`
+
+func (q *Queries) ListFollowedFeedIDs(ctx context.Context, userID uuid.UUID) ([]uuid.UUID, error) {
+	rows, err := q.db.QueryContext(ctx, listFollowedFeedIDs, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []uuid.UUID
+	for rows.Next() {
+		var feed_id uuid.UUID
+		if err := rows.Scan(&feed_id); err != nil {
+			return nil, err
+		}
+		items = append(items, feed_id)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err
