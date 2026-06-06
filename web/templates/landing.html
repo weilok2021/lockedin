@@ -1,6 +1,6 @@
 {{define "content"}}
 <nav class="lp-nav">
-    <a href="/" class="lp-brand">Locked<span class="wm-in">In</span></a>
+    <a href="/" class="lp-brand">LockedIn<span class="wm-dot">.</span></a>
     <div class="lp-nav-links">
         <a href="/login">Sign in</a>
         <a href="/signup" class="btn btn-primary btn-sm">Get started</a>
@@ -8,64 +8,61 @@
 </nav>
 
 <header class="lp-hero">
-    <div class="lp-eyebrow"><span class="pip"></span> A calmer way to keep up</div>
-    <h1>The internet, <em>without the noise.</em></h1>
-    <p class="lp-lede">LockedIn quietly gathers writing from the people and topics you actually follow, then stops. No algorithm, no infinite scroll, no notifications fighting for your attention. Just what you asked for, and an ending.</p>
-    <div class="lp-cta">
-        <a href="/signup" class="btn btn-primary btn-lg">Create your account</a>
-        <a href="/login" class="lp-ghost">Already have one? Sign in →</a>
+    <div>
+        <h1>Your corner of the internet, <span class="text-grad">curated.</span></h1>
+        <p class="lp-lede">Hand-picked blogs, channels and shows in one lively feed. No algorithm deciding for you, no junk sneaking in — just the good stuff from sources you chose, lined up and ready.</p>
+        <div class="lp-cta">
+            <a href="/signup" class="btn btn-primary btn-lg">Start your shelf</a>
+            <a href="/login" class="lp-ghost">Sign in →</a>
+        </div>
+    </div>
+    <div class="lp-fan" aria-hidden="true">
+        <div class="lp-mini m1">
+            <div class="lp-mini-media band-youtube">▶</div>
+            <div class="lp-mini-body"><span class="lp-mini-src">Video</span>Postgres internals in 12 minutes</div>
+        </div>
+        <div class="lp-mini m2">
+            <div class="lp-mini-media band-podcast">🎧</div>
+            <div class="lp-mini-body"><span class="lp-mini-src">Podcast</span>#327 — Profiling Go in production</div>
+        </div>
+        <div class="lp-mini m3">
+            <div class="lp-mini-media band-article">📝</div>
+            <div class="lp-mini-body"><span class="lp-mini-src">Article</span>Everything I learned shipping agents with Claude</div>
+        </div>
     </div>
 </header>
 
-<section class="lp-contrast">
-    <div class="col no">
-        <h3>What it isn't</h3>
-        <ul>
-            <li><span class="mk">✕</span> An algorithm deciding what you see</li>
-            <li><span class="mk">✕</span> A feed that never ends</li>
-            <li><span class="mk">✕</span> Engagement bait and outrage</li>
-            <li><span class="mk">✕</span> Notifications all day</li>
-        </ul>
+<section class="lp-features">
+    <div class="lp-feature">
+        <div class="lp-feature-tile band-article">📚</div>
+        <h3>A hand-picked catalog</h3>
+        <p>Every source is curated for quality before it gets in. Follow the ones that feed you — your feed is only ever what you chose.</p>
     </div>
-    <div class="col yes">
-        <h3>What it is</h3>
-        <ul>
-            <li><span class="mk">✓</span> Only the topics you choose to follow</li>
-            <li><span class="mk">✓</span> A digest that has a clear end</li>
-            <li><span class="mk">✓</span> Chronological, calm, complete</li>
-            <li><span class="mk">✓</span> One quiet email when there's something new</li>
-        </ul>
+    <div class="lp-feature">
+        <div class="lp-feature-tile band-youtube">🎛️</div>
+        <h3>Articles, videos & podcasts</h3>
+        <p>Writing, watching and listening live side by side in one chronological lineup — each card styled for what it is.</p>
+    </div>
+    <div class="lp-feature">
+        <div class="lp-feature-tile band-podcast">🚀</div>
+        <h3>Read at the source</h3>
+        <p>Cards link straight to the original post, video or episode. Creators keep their audience; you get the real thing.</p>
     </div>
 </section>
 
 <section class="lp-how">
     <div class="lp-how-label">How it works</div>
     <div class="lp-steps">
-        <div class="lp-step"><div class="lp-step-n">01</div><h4>Follow a topic</h4><p>Type what you care about: “Claude Code”, “Postgres”, a writer you trust. No feed URLs, no setup.</p></div>
-        <div class="lp-step"><div class="lp-step-n">02</div><h4>We gather it quietly</h4><p>Every 30 minutes we check your sources and pull anything new. Nothing more, nothing ranked.</p></div>
-        <div class="lp-step"><div class="lp-step-n">03</div><h4>You read, then you're done</h4><p>Open your reading room, catch up, reach the end. Come back tomorrow. That's the whole idea.</p></div>
-    </div>
-</section>
-
-<section class="lp-showcase">
-    <div class="lp-showcase-label">This is your reading room</div>
-    <div class="lp-win" aria-hidden="true">
-        <div class="lp-win-bar"><span class="d"></span><span class="d"></span><span class="d"></span><span class="t">Locked<span class="wm-in">In</span></span></div>
-        <div class="lp-win-body">
-            <div class="lp-win-greet">A few quiet things have arrived. <b>Take your time.</b></div>
-            <div class="lp-win-day">Today · 3 new</div>
-            <div class="lp-win-item"><div class="src">The Go Blog <span class="dot"></span> 2 hours ago</div><div class="ttl">Writing a faster feed parser with encoding/xml</div><div class="dek">Streaming tokens instead of unmarshalling whole documents.</div></div>
-            <div class="lp-win-item"><div class="src">Boris Cherny <span class="dot"></span> 5 hours ago</div><div class="ttl">A year of agentic coding with Claude Code</div></div>
-            <div class="lp-win-item"><div class="src">Brandur <span class="dot"></span> 7 hours ago</div><div class="ttl">Postgres LISTEN/NOTIFY as a lightweight queue</div></div>
-            <div class="lp-win-end"><div class="e">That's everything.</div><div class="s">Nothing more to load. Rest your eyes, and come back tomorrow.</div></div>
-        </div>
+        <div class="lp-step"><div class="lp-step-n">01</div><h4>Browse the catalog</h4><p>A curated shelf of writers, channels and shows — vetted for quality, not virality.</p></div>
+        <div class="lp-step"><div class="lp-step-n">02</div><h4>Follow your picks</h4><p>Build your own lineup, source by source. Unfollow any time — you're the curator now.</p></div>
+        <div class="lp-step"><div class="lp-step-n">03</div><h4>Enjoy the lineup</h4><p>New posts, videos and episodes gather in one feed of cards that link out to the real thing.</p></div>
     </div>
 </section>
 
 <section class="lp-close">
-    <h2>Stay current without staying online.</h2>
+    <h2>Good inputs, <span class="text-grad">on purpose.</span></h2>
     <a href="/signup" class="btn btn-primary btn-lg">Get started, it's free</a>
 </section>
 
-<footer class="lp-foot"><span>LockedIn</span><span>A quiet corner of the internet</span></footer>
+<footer class="lp-foot"><span>LockedIn</span><span>Quality picks. Zero noise.</span></footer>
 {{end}}

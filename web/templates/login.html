@@ -2,9 +2,8 @@
 <div class="auth-container">
     <div class="auth-card">
         <div class="brand">
-            <div class="brand-name">Locked<span class="wm-in">In</span></div>
-            <div class="brand-tagline">Your quiet corner of the internet</div>
-            <p class="brand-pitch">The things you follow, gathered calmly. No algorithms, no endless scroll.</p>
+            <div class="brand-name">LockedIn<span class="wm-dot">.</span></div>
+            <div class="brand-tagline">Quality picks. Zero noise.</div>
         </div>
 
         <form class="auth-form" method="POST" action="/login">
@@ -18,7 +17,7 @@
 
             {{if eq .Message "verified"}}
             <div class="message message-success">
-                Email verified. You can sign in now.
+                Email verified. You're in — sign in below.
             </div>
             {{end}}
 
