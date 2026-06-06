@@ -7,7 +7,7 @@
     <title>{{.Title}} · LockedIn</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
@@ -20,7 +20,7 @@
 {{define "appnav"}}
 <nav class="app-nav">
     <div class="app-nav-inner">
-        <a href="/" class="nav-brand">Locked<span class="wm-in">In</span></a>
+        <a href="/" class="nav-brand">LockedIn<span class="wm-dot">.</span></a>
         <div class="nav-right">
             <div class="nav-links">
                 <a href="/" class="nav-link{{if eq .Title "Home"}} is-active{{end}}">Feed</a>
@@ -39,36 +39,20 @@
 </nav>
 {{end}}
 
-{{/* Shared empty-feed state (type-led, style C). Used by home + future feed.
-     Topic chips POST to the existing /subscriptions handler (no backend change). */}}
+{{/* Shared empty-feed state. The old topic chips POSTed to the retired
+     POST /subscriptions route; following now happens in the catalog. */}}
 {{define "feedempty"}}
 <div class="feed-empty">
-    <div class="feed-empty-rule"></div>
-    <div class="feed-empty-kicker"><span class="pip"></span> No new items yet</div>
-    <h1 class="feed-empty-title">Your reading room is <em>quiet.</em></h1>
-    <p class="feed-empty-text">
-        Nothing's arrived because you haven't followed anything yet. Pick a topic and new
-        writing will gather here, quietly, with no algorithm deciding for you.
-    </p>
-
-    <div class="starter">
-        <div class="starter-label">Start with a topic</div>
-        <div class="starter-chips">
-            <form method="POST" action="/subscriptions" class="chip-form"><input type="hidden" name="topic" value="Claude Code"><button class="chip" type="submit"><span class="plus">+</span> Claude Code</button></form>
-            <form method="POST" action="/subscriptions" class="chip-form"><input type="hidden" name="topic" value="Go"><button class="chip" type="submit"><span class="plus">+</span> Go</button></form>
-            <form method="POST" action="/subscriptions" class="chip-form"><input type="hidden" name="topic" value="Postgres"><button class="chip" type="submit"><span class="plus">+</span> Postgres</button></form>
-            <form method="POST" action="/subscriptions" class="chip-form"><input type="hidden" name="topic" value="Self-hosting"><button class="chip" type="submit"><span class="plus">+</span> Self-hosting</button></form>
-            <form method="POST" action="/subscriptions" class="chip-form"><input type="hidden" name="topic" value="AI agents"><button class="chip" type="submit"><span class="plus">+</span> AI agents</button></form>
-            <form method="POST" action="/subscriptions" class="chip-form"><input type="hidden" name="topic" value="Docker"><button class="chip" type="submit"><span class="plus">+</span> Docker</button></form>
-            <form method="POST" action="/subscriptions" class="chip-form"><input type="hidden" name="topic" value="Distributed systems"><button class="chip" type="submit"><span class="plus">+</span> Distributed systems</button></form>
-        </div>
-        <div class="starter-or">or follow your own</div>
-        <form method="POST" action="/subscriptions" class="starter-search">
-            <input class="form-input" type="text" name="topic" placeholder="e.g. type theory, observability…" required>
-            <button class="btn btn-primary" type="submit">Follow</button>
-        </form>
+    <div class="feed-empty-glyphs">
+        <span class="g g-art">📝</span>
+        <span class="g g-vid">▶</span>
+        <span class="g g-pod">🎧</span>
     </div>
-
-    <div class="feed-empty-foot"><span class="pip"></span> Once you follow something, new items land here every 30 minutes, and the page always ends.</div>
+    <h1 class="feed-empty-title">Your shelf is <span class="text-grad">waiting.</span></h1>
+    <p class="feed-empty-text">
+        Follow a few hand-picked sources and their newest posts, videos and
+        episodes will line up right here — no algorithm, just your picks.
+    </p>
+    <a class="btn btn-primary btn-lg" href="/catalog">Browse the catalog</a>
 </div>
 {{end}}
