@@ -3,12 +3,12 @@
 
 <main class="app-main">
     <header class="page-header">
-        <h1 class="page-title">Catalog</h1>
-        <p class="page-subtitle">A hand-picked shelf of writers and shows. Follow the ones you want — their posts gather in your feed.</p>
+        <h1 class="page-title">The <span class="text-grad">catalog</span></h1>
+        <p class="page-subtitle">Hand-picked sources worth your attention. Follow what feeds you.</p>
     </header>
 
     {{if eq .Message "added"}}
-    <div class="message message-success">Followed. New posts will appear in your feed after the next fetch.</div>
+    <div class="message message-success">Followed! New posts join your feed after the next fetch.</div>
     {{end}}
     {{if eq .Message "removed"}}
     <div class="message message-info">Unfollowed.</div>
@@ -18,26 +18,26 @@
     {{end}}
 
     {{if .Catalog}}
-    <ul class="sub-list">
+    <ul class="shelf">
         {{range .Catalog}}
-        <li class="sub-item">
-            <div class="sub-main">
-                <span class="sub-title">{{if .Feed.Title.Valid}}{{.Feed.Title.String}}{{else}}(untitled){{end}}</span>
-                <span class="sub-meta">
-                    {{if .Feed.Category.Valid}}{{.Feed.Category.String}}{{end}}
-                    <span class="tag">{{.Feed.SourceType}}</span>
-                </span>
-                {{if .Feed.Description.Valid}}<p class="sub-desc">{{.Feed.Description.String}}</p>{{end}}
+        <li class="shelf-card">
+            <div class="shelf-band band-{{.Feed.SourceType}}"></div>
+            <div class="shelf-body">
+                <span class="shelf-name">{{if .Feed.Title.Valid}}{{.Feed.Title.String}}{{else}}(untitled){{end}}</span>
+                {{if .Feed.Description.Valid}}<p class="shelf-desc">{{.Feed.Description.String}}</p>{{end}}
+                <div class="shelf-foot">
+                    {{if .Feed.Category.Valid}}<span class="chip-cat">{{.Feed.Category.String}}</span>{{end}}
+                    {{if .IsFollowing}}
+                    <form method="POST" action="/subscriptions/{{.Feed.ID}}/delete">
+                        <button class="btn btn-mint btn-sm" type="submit">Following ✓</button>
+                    </form>
+                    {{else}}
+                    <form method="POST" action="/subscriptions/{{.Feed.ID}}">
+                        <button class="btn btn-ink btn-sm" type="submit">+ Follow</button>
+                    </form>
+                    {{end}}
+                </div>
             </div>
-            {{if .IsFollowing}}
-            <form method="POST" action="/subscriptions/{{.Feed.ID}}/delete" class="sub-remove">
-                <button class="btn btn-ghost btn-sm" type="submit">Following ✓</button>
-            </form>
-            {{else}}
-            <form method="POST" action="/subscriptions/{{.Feed.ID}}" class="sub-remove">
-                <button class="btn btn-primary btn-sm" type="submit">Follow</button>
-            </form>
-            {{end}}
         </li>
         {{end}}
     </ul>

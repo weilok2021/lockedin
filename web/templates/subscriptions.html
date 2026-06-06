@@ -3,8 +3,8 @@
 
 <main class="app-main">
     <header class="page-header">
-        <h1 class="page-title">Subscriptions</h1>
-        <p class="page-subtitle">The sources you follow. New posts from these land in your feed.</p>
+        <h1 class="page-title">Your <span class="text-grad">sources</span></h1>
+        <p class="page-subtitle">The shelf you've built. New posts from these land in your feed.</p>
     </header>
 
     {{if eq .Message "removed"}}
@@ -15,19 +15,15 @@
     <ul class="sub-list">
         {{range .Subscriptions}}
         <li class="sub-item">
-            <div class="sub-main">
-                <span class="sub-title">{{if .CustomTitle.Valid}}{{.CustomTitle.String}}{{else if .Title.Valid}}{{.Title.String}}{{else}}(untitled){{end}}</span>
-                <span class="sub-meta">
-                    {{if .Category.Valid}}{{.Category.String}}{{end}}
-                    <span class="tag">{{.SourceType}}</span>
-                    {{if .LastFetchStatus.Valid}}
-                        <span class="status status-{{.LastFetchStatus.String}}">{{.LastFetchStatus.String}}</span>
-                    {{else}}
-                        <span class="status status-pending">pending</span>
-                    {{end}}
-                </span>
-            </div>
-            <form method="POST" action="/subscriptions/{{.FeedID}}/delete" class="sub-remove">
+            <span class="sub-tile band-{{.SourceType}}"></span>
+            <span class="sub-title">{{if .CustomTitle.Valid}}{{.CustomTitle.String}}{{else if .Title.Valid}}{{.Title.String}}{{else}}(untitled){{end}}</span>
+            {{if .Category.Valid}}<span class="chip-cat">{{.Category.String}}</span>{{end}}
+            {{if .LastFetchStatus.Valid}}
+                <span class="status status-{{.LastFetchStatus.String}}">{{.LastFetchStatus.String}}</span>
+            {{else}}
+                <span class="status status-pending">pending</span>
+            {{end}}
+            <form method="POST" action="/subscriptions/{{.FeedID}}/delete">
                 <button class="btn btn-ghost btn-sm" type="submit">Unfollow</button>
             </form>
         </li>
@@ -36,7 +32,7 @@
     {{else}}
     <div class="empty-state">
         <h2 class="empty-state-title">You're not following anything yet</h2>
-        <p class="empty-state-text">Browse the <a href="/catalog">catalog</a> to follow writers and shows.</p>
+        <p class="empty-state-text">Browse the <a href="/catalog">catalog</a> to start your shelf.</p>
     </div>
     {{end}}
 </main>
