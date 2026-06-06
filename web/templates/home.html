@@ -3,26 +3,32 @@
 
 <main class="app-main">
     {{if .Items}}
-        <p class="feed-greeting">A few quiet things have arrived. <b>Take your time.</b></p>
+        <div class="feed-head">
+            <h1 class="feed-greet">Your <span class="text-grad">lineup</span></h1>
+            <span class="feed-meta">{{.Pagination.TotalItems}} picks · page {{.Pagination.Page}} of {{.Pagination.TotalPages}}</span>
+        </div>
 
-        {{range .Items}}
-        <a class="feed-item" href="{{.Url}}" target="_blank" rel="noopener noreferrer">
-            <div class="feed-item-src">
-                {{if .SourceTitle.Valid}}{{.SourceTitle.String}}{{end}}
-                {{if .PublishedAt.Valid}}<span class="dot"></span> {{.PublishedAt.Time.Format "Jan 2, 2006"}}{{end}}
-            </div>
-            <div class="feed-item-title">{{.Title}}</div>
-            {{if .Summary.Valid}}<div class="feed-item-dek">{{.Summary.String}}</div>{{end}}
-        </a>
-        {{end}}
+        <div class="feed-grid">
+            {{range .Items}}
+            <a class="card card-{{.SourceType}}{{if not .ImageUrl.Valid}} is-noimg{{end}}" href="{{.Url}}" target="_blank" rel="noopener noreferrer">
+                {{if .ImageUrl.Valid}}
+                <div class="card-media">
+                    <img src="{{.ImageUrl.String}}" alt="" loading="lazy">
+                    <span class="card-badge">{{.SourceType}}</span>
+                </div>
+                {{end}}
+                <div class="card-body">
+                    <span class="card-src">
+                        {{if .SourceTitle.Valid}}{{.SourceTitle.String}}{{end}}{{if .PublishedAt.Valid}} · {{.PublishedAt.Time.Format "Jan 2"}}{{end}}
+                    </span>
+                    <h2 class="card-title">{{.Title}}</h2>
+                    {{if .Summary.Valid}}<p class="card-dek">{{.Summary.String}}</p>{{end}}
+                </div>
+            </a>
+            {{end}}
+        </div>
 
         <nav class="pager" aria-label="Feed pages">
-            <p class="pager-status">
-                Showing <b>{{.Pagination.FirstItem}}–{{.Pagination.LastItem}}</b> of {{.Pagination.TotalItems}}
-                <span class="dot"></span>
-                Page {{.Pagination.Page}} of {{.Pagination.TotalPages}}
-            </p>
-
             <div class="pager-controls">
                 {{if .Pagination.HasPrevPage}}
                 <a class="pager-step" href="/?page={{.Pagination.PrevPage}}" rel="prev">← Newer</a>
@@ -46,12 +52,16 @@
                 <span class="pager-step is-disabled">Older →</span>
                 {{end}}
             </div>
+            <p class="pager-status">
+                Showing <b>{{.Pagination.FirstItem}}–{{.Pagination.LastItem}}</b> of {{.Pagination.TotalItems}}
+            </p>
         </nav>
 
         {{if not .Pagination.HasNextPage}}
         <div class="feed-end">
-            <div class="feed-end-title">That's everything.</div>
-            <p class="feed-end-text">You've reached the last page. Rest your eyes, and come back tomorrow.</p>
+            <div class="feed-end-flag">🏁</div>
+            <div class="feed-end-title">That's the whole shelf.</div>
+            <p class="feed-end-text">You've seen every pick from your sources. New finds land after the next refresh.</p>
         </div>
         {{end}}
     {{else}}
