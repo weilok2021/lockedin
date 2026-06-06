@@ -9,6 +9,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -38,6 +39,20 @@ type PageData struct {
 	Subscriptions []database.ListUserSubscriptionsRow
 	Catalog       []CatalogCard // ← add this
 	Items         []database.ListItemsForUserRow
+	Pagination    Pagination
+}
+
+type Pagination struct {
+	Page        int   // current page, 1-based
+	TotalPages  int   // total number of pages
+	PageNumbers []int // [1, 2, 3, …] — for the clickable page links
+	FirstItem   int   // 1-based index of the first item shown (e.g. 21)
+	LastItem    int   // 1-based index of the last item shown  (e.g. 40)
+	TotalItems  int   // total items across all your subscriptions (e.g. 87)
+	HasPrevPage bool  // (page > 1)
+	HasNextPage bool  // page < TotalPages
+	PrevPage    int   // page - 1
+	NextPage    int   // page + 1
 }
 
 // For middlewares and handlers to access to login user struct, (authorization)
@@ -159,28 +174,69 @@ func (a *App) userFromSession(r *http.Request) (database.User, bool) {
 
 func (a *App) handlerHome(w http.ResponseWriter, r *http.Request) {
 	user := r.Context().Value(userContextKey).(database.User)
+	const pageSize = 20
+
+	page := 1
+	if n, err := strconv.Atoi(r.URL.Query().Get("page")); err == nil && n > 1 {
+		page = n
+	}
+
+	// 1. Ask the DB how many items exist. Everything else is arithmetic.
+	total, err := a.queries.CountItemsForUser(r.Context(), user.ID)
+	if err != nil {
+		responseWithError(w, http.StatusInternalServerError, "Could not load your feed", err)
+		return
+	}
+
+	totalPages := (int(total) + pageSize - 1) / pageSize // ceil division
+	if totalPages < 1 {
+		totalPages = 1 // always "Page 1 of 1", even with zero items
+	}
+	if page > totalPages {
+		page = totalPages // clamp ?page=999 back to the last real page
+	}
+
+	// 2. Fetch exactly this page — Limit IS the page size now. No +1 probe.
+	offset := (page - 1) * pageSize
 	items, err := a.queries.ListItemsForUser(r.Context(), database.ListItemsForUserParams{
 		UserID: user.ID,
-		Limit:  20, // page 1
-		Offset: 0,
+		Limit:  pageSize,
+		Offset: int32(offset),
 	})
 	if err != nil {
 		responseWithError(w, http.StatusInternalServerError, "Could not load your feed", err)
 		return
 	}
 
-	// drop unsafe image URLs so the template can trust ImageUrl blindly.
-	// index the slice (range gives a copy — same trap as the catalog loop).
-	for i := range items {
-		if items[i].ImageUrl.Valid && !isHTTPURL(items[i].ImageUrl.String) {
-			items[i].ImageUrl = sql.NullString{} // blank it -> Valid becomes false
-		}
+	// (keep your existing image-URL sanitize loop here)
+
+	// 3. Build the clickable page numbers [1..totalPages].
+	pageNumbers := make([]int, totalPages)
+	for i := range pageNumbers {
+		pageNumbers[i] = i + 1
+	}
+
+	firstItem := offset + 1
+	if total == 0 {
+		firstItem = 0 // nothing to show
 	}
 
 	a.templates["home"].ExecuteTemplate(w, "layout", PageData{
 		Title: "Home",
 		Email: user.Email,
-		Items: items, // <- add this field to PageData
+		Items: items,
+		Pagination: Pagination{
+			Page:        page,
+			TotalPages:  totalPages,
+			PageNumbers: pageNumbers,
+			FirstItem:   firstItem,
+			LastItem:    offset + len(items),
+			TotalItems:  int(total),
+			HasNextPage: page < totalPages,
+			HasPrevPage: page > 1,
+			PrevPage:    page - 1,
+			NextPage:    page + 1,
+		},
 	})
 }
 

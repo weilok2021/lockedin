@@ -134,12 +134,13 @@ Decided mid-Phase-2: keep topic search **in v1** (not deferred to v2), alongside
 
 ## Phase 3 — Manual fetch + fetch state
 
-**Goal:** Fetching is **user-triggered**, not a background loop. A Refresh pulls new posts on demand; Read-More pages into the already-stored archive.
+**Goal:** Fetching is **user-triggered**, not a background loop. A Refresh pulls new posts on demand; numbered pages read back into the already-stored archive.
 
 **Decision (mid-Phase-2):** dropped the `time.Ticker` background loop. For a personal app, manual fetch is enough; the only thing that genuinely needs scheduling is the email digest, which a separate cron'd job handles (Phase 5) — *not* a fetch loop. See spec §7.
 
-- [ ] **3.1 Refresh / Read-More.** A `POST /refresh` button that runs the fetch over the user's subscribed feeds, then redirects to `/`. **Read-More is *not* a refetch** — it's pure pagination: bump `OFFSET` on `ListItemsForUser` to read further back into the stored archive (old posts are never deleted; `InsertItem` only inserts).
-- [ ] **3.2 (optional) Fetch-state writeback.** Add an "update feed fetch state" query so each fetch writes `last_fetched_at`/`last_fetch_status`/`last_fetch_error` back to the feed — this turns the subscriptions page's "pending" badge into "ok". Optionally send conditional GETs (`If-None-Match`/`If-Modified-Since` from stored `etag`/`last_modified`, handle `304`) so a refresh doesn't re-download unchanged feeds.
+- [x] **3.1 Numbered pagination on the reading feed.** Server-rendered numbered pages over the stored archive — *not* a refetch (old posts are never deleted; `InsertItem` only inserts). A `CountItemsForUser` query returns the total; the handler derives page count, the `X–Y of Z` range, and prev/next purely by arithmetic; `ListItemsForUser` fetches one page via `LIMIT pageSize OFFSET (page-1)*pageSize`. No JavaScript — every control is an `<a href="/?page=N">`. Chose numbered pages over Read-More/Load-More for clearer orientation ("Page N of M", "items X–Y of Z"). Walkthrough: `docs/pagination-walkthrough.md`.
+- [ ] **3.2 Refresh button.** A `POST /refresh` that runs the fetch over the user's subscribed feeds, then redirects to `/`.
+- [ ] **3.3 (optional) Fetch-state writeback.** Add an "update feed fetch state" query so each fetch writes `last_fetched_at`/`last_fetch_status`/`last_fetch_error` back to the feed — this turns the subscriptions page's "pending" badge into "ok". Optionally send conditional GETs (`If-None-Match`/`If-Modified-Since` from stored `etag`/`last_modified`, handle `304`) so a refresh doesn't re-download unchanged feeds.
 
 **Deferred (not needed for manual fetch):** the `time.Ticker` loop and `errgroup` concurrency. Revisit only if you later want autonomous background fetching, or if refreshing many feeds gets slow (then parallelize the per-feed fetch).
 

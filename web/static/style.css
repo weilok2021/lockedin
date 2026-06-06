@@ -653,6 +653,63 @@ a:hover { color: var(--clay-deeper); text-decoration: underline; text-underline-
     background: var(--surface-2);
 }
 
+/* reading-feed pager (numbered pages: range + page links) */
+.pager {
+    margin: 3rem 0 0.5rem;
+    padding-top: 1.8rem;
+    border-top: 1px solid var(--hair);
+}
+.pager-status {
+    text-align: center;
+    font-size: 0.8rem;
+    color: var(--muted);
+    letter-spacing: 0.02em;
+    margin-bottom: 1.1rem;
+}
+.pager-status b { color: var(--ink-soft); font-weight: 500; }
+
+.pager-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+}
+.pager-step {
+    font-size: 0.85rem;
+    color: var(--clay-deep);
+    padding: 0.3rem 0.5rem;
+    white-space: nowrap;
+}
+.pager-step.is-disabled {
+    color: var(--hair-strong);
+    pointer-events: none;      /* greyed + unclickable at the ends */
+}
+
+.pager-numbers {
+    display: flex;
+    align-items: center;
+    gap: 0.2rem;
+    margin: 0 0.3rem;
+}
+.pager-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2rem;
+    height: 2rem;
+    padding: 0 0.4rem;
+    font-size: 0.85rem;
+    color: var(--ink-soft);
+    border-radius: var(--radius-pill);
+    transition: background var(--t), color var(--t);
+}
+.pager-num:hover { background: var(--surface-2); text-decoration: none; }
+.pager-num.is-current {
+    background: var(--clay-deep);   /* matches filled buttons; AA contrast */
+    color: #fdf8f3;
+    font-weight: 500;
+}
+
 /* status pill */
 .status {
     display: inline-flex;

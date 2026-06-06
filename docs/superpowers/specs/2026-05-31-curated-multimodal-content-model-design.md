@@ -132,7 +132,7 @@ func itemParams(feed database.Feed, item *gofeed.Item) database.InsertItemParams
 
 `fetchFeed` takes the `database.Feed` row (so it has `source_type`); `ListFeeds` already returns it.
 
-**Fetch trigger (revised).** Fetching is **user-triggered** — a manual *Refresh* button runs `fetchFeed` over the user's feeds on demand; *Read-More* is pure pagination over the stored archive. The `time.Ticker` background loop and `errgroup` concurrency are **deferred** (not needed for a personal, manually-refreshed app). The only thing that genuinely needs scheduling — the **email digest** — is a separate cron'd job that *reads* the DB and resurfaces a few random items (see the implementation plan, Phase 5); it does not fetch. Conditional GET (etag / If-Modified-Since) + fetch-state writeback remain optional polish so a refresh skips unchanged feeds and the subscriptions page shows "ok" instead of "pending".
+**Fetch trigger (revised).** Fetching is **user-triggered** — a manual *Refresh* button runs `fetchFeed` over the user's feeds on demand; the reading feed itself is **server-rendered numbered pages** — pure pagination over the stored archive (see implementation plan Phase 3.1). The `time.Ticker` background loop and `errgroup` concurrency are **deferred** (not needed for a personal, manually-refreshed app). The only thing that genuinely needs scheduling — the **email digest** — is a separate cron'd job that *reads* the DB and resurfaces a few random items (see the implementation plan, Phase 5); it does not fetch. Conditional GET (etag / If-Modified-Since) + fetch-state writeback remain optional polish so a refresh skips unchanged feeds and the subscriptions page shows "ok" instead of "pending".
 
 ## 8. Rendering the blended feed (M7)
 

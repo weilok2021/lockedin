@@ -16,10 +16,44 @@
         </a>
         {{end}}
 
+        <nav class="pager" aria-label="Feed pages">
+            <p class="pager-status">
+                Showing <b>{{.Pagination.FirstItem}}–{{.Pagination.LastItem}}</b> of {{.Pagination.TotalItems}}
+                <span class="dot"></span>
+                Page {{.Pagination.Page}} of {{.Pagination.TotalPages}}
+            </p>
+
+            <div class="pager-controls">
+                {{if .Pagination.HasPrevPage}}
+                <a class="pager-step" href="/?page={{.Pagination.PrevPage}}" rel="prev">← Newer</a>
+                {{else}}
+                <span class="pager-step is-disabled">← Newer</span>
+                {{end}}
+
+                <div class="pager-numbers">
+                    {{range $n := .Pagination.PageNumbers}}
+                        {{if eq $n $.Pagination.Page}}
+                        <span class="pager-num is-current" aria-current="page">{{$n}}</span>
+                        {{else}}
+                        <a class="pager-num" href="/?page={{$n}}">{{$n}}</a>
+                        {{end}}
+                    {{end}}
+                </div>
+
+                {{if .Pagination.HasNextPage}}
+                <a class="pager-step" href="/?page={{.Pagination.NextPage}}" rel="next">Older →</a>
+                {{else}}
+                <span class="pager-step is-disabled">Older →</span>
+                {{end}}
+            </div>
+        </nav>
+
+        {{if not .Pagination.HasNextPage}}
         <div class="feed-end">
             <div class="feed-end-title">That's everything.</div>
-            <p class="feed-end-text">Nothing more to load. Rest your eyes, and come back tomorrow.</p>
+            <p class="feed-end-text">You've reached the last page. Rest your eyes, and come back tomorrow.</p>
         </div>
+        {{end}}
     {{else}}
         {{template "feedempty" .}}
     {{end}}

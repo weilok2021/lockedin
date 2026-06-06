@@ -12,6 +12,22 @@ import (
 	"github.com/google/uuid"
 )
 
+const countItemsForUser = `-- name: CountItemsForUser :one
+SELECT COUNT(*)
+FROM user_subscriptions AS u
+INNER JOIN items AS i ON i.feed_id = u.feed_id
+WHERE u.user_id = $1
+`
+
+// Total items across everything this user follows. Drives page count + range.
+// No feeds join needed: we only count, and feed_id lives on both tables.
+func (q *Queries) CountItemsForUser(ctx context.Context, userID uuid.UUID) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countItemsForUser, userID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const insertItem = `-- name: InsertItem :exec
 INSERT INTO items(id, feed_id, guid, url, title, summary, author, published_at)
 VALUES(gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7)
@@ -44,12 +60,12 @@ func (q *Queries) InsertItem(ctx context.Context, arg InsertItemParams) error {
 
 const listItemsForUser = `-- name: ListItemsForUser :many
 SELECT i.id, i.title, i.url, i.summary, i.image_url, i.published_at,
-         f.title AS source_title, f.source_type 
+         f.title AS source_title, f.source_type
 FROM user_subscriptions AS u
 INNER JOIN feeds AS f ON f.id = u.feed_id
 INNER JOIN items AS i ON i.feed_id = f.id
 WHERE u.user_id = $1
-ORDER BY i.fetched_at DESC 
+ORDER BY i.fetched_at DESC
 LIMIT $2 OFFSET $3
 `
 
