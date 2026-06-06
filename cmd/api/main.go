@@ -9,6 +9,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -36,6 +37,7 @@ type PageData struct {
 	Email         string
 	Subscriptions []database.ListUserSubscriptionsRow
 	Catalog       []CatalogCard // ← add this
+	Items         []database.ListItemsForUserRow
 }
 
 // For middlewares and handlers to access to login user struct, (authorization)
@@ -157,10 +159,34 @@ func (a *App) userFromSession(r *http.Request) (database.User, bool) {
 
 func (a *App) handlerHome(w http.ResponseWriter, r *http.Request) {
 	user := r.Context().Value(userContextKey).(database.User)
+	items, err := a.queries.ListItemsForUser(r.Context(), database.ListItemsForUserParams{
+		UserID: user.ID,
+		Limit:  20, // page 1
+		Offset: 0,
+	})
+	if err != nil {
+		responseWithError(w, http.StatusInternalServerError, "Could not load your feed", err)
+		return
+	}
+
+	// drop unsafe image URLs so the template can trust ImageUrl blindly.
+	// index the slice (range gives a copy — same trap as the catalog loop).
+	for i := range items {
+		if items[i].ImageUrl.Valid && !isHTTPURL(items[i].ImageUrl.String) {
+			items[i].ImageUrl = sql.NullString{} // blank it -> Valid becomes false
+		}
+	}
+
 	a.templates["home"].ExecuteTemplate(w, "layout", PageData{
 		Title: "Home",
 		Email: user.Email,
+		Items: items, // <- add this field to PageData
 	})
+}
+
+// isHTTPURL reports whether s is a plain http(s) URL — safe for <img src>.
+func isHTTPURL(s string) bool {
+	return strings.HasPrefix(s, "http://") || strings.HasPrefix(s, "https://")
 }
 
 func (a *App) handlerSignUpForm(w http.ResponseWriter, r *http.Request) {

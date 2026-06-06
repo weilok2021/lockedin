@@ -2,6 +2,26 @@
 {{template "appnav" .}}
 
 <main class="app-main">
-    {{template "feedempty" .}}
+    {{if .Items}}
+        <p class="feed-greeting">A few quiet things have arrived. <b>Take your time.</b></p>
+
+        {{range .Items}}
+        <a class="feed-item" href="{{.Url}}" target="_blank" rel="noopener noreferrer">
+            <div class="feed-item-src">
+                {{if .SourceTitle.Valid}}{{.SourceTitle.String}}{{end}}
+                {{if .PublishedAt.Valid}}<span class="dot"></span> {{.PublishedAt.Time.Format "Jan 2, 2006"}}{{end}}
+            </div>
+            <div class="feed-item-title">{{.Title}}</div>
+            {{if .Summary.Valid}}<div class="feed-item-dek">{{.Summary.String}}</div>{{end}}
+        </a>
+        {{end}}
+
+        <div class="feed-end">
+            <div class="feed-end-title">That's everything.</div>
+            <p class="feed-end-text">Nothing more to load. Rest your eyes, and come back tomorrow.</p>
+        </div>
+    {{else}}
+        {{template "feedempty" .}}
+    {{end}}
 </main>
 {{end}}
