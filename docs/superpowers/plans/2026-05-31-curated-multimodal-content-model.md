@@ -96,23 +96,23 @@ Same convention as `2026-05-16-low-noise-aggregator-implementation.md`: **mentor
 
 **Done when:** `/catalog` lists every curated source and you can follow/unfollow, with the button reflecting state. ✅
 
-### Task 2.4 — `ListItemsForUser` query
+### Task 2.4 — `ListItemsForUser` query ✅
 
 **Files:** Modify `sql/queries/items.sql` (Claude provides; shape in spec §8).
 
-- [ ] Add `ListItemsForUser :many` (items INNER JOIN subscriptions INNER JOIN feeds, newest-first, `LIMIT/OFFSET`). `sqlc generate`.
-- [ ] Confirm the row type carries `SourceTitle`, `SourceType`, `ImageUrl`, and `Summary`.
+- [x] Add `ListItemsForUser :many` (items INNER JOIN subscriptions INNER JOIN feeds, newest-first, `LIMIT/OFFSET`). `sqlc generate`.
+- [x] Confirm the row type carries `SourceTitle`, `SourceType`, `ImageUrl`, and `Summary`.
 
-### Task 2.5 — The card reading page
+### Task 2.5 — The card reading page ✅
 
 **Files:** Modify `cmd/api/main.go` (`handlerHome` / `GET /`). Claude writes/updates `web/templates/home.html` + CSS. **No `bluemonday`** — summarys are plain text.
 
-- [ ] **Contract (you implement):** `GET /` when logged in → `ListItemsForUser(user.ID, limit, offset)` → pass the rows to the template. Before passing, **validate each `image_url`**: blank it unless it starts with `http://`/`https://`, so a bad scheme never reaches `<img src>`. No HTML sanitization needed — the summary is already plain text from the fetcher.
-- [ ] Claude writes `home.html`: the card list from spec §8 — each item is an `<a class="card card-{{.SourceType}}" href="{{.Url}}" target="_blank" rel="noopener noreferrer">` with thumbnail (if present), source+date, title, summary. `source_type` drives card styling (play overlay for youtube, badge for podcast).
+- [x] **Contract (you implement):** `GET /` when logged in → `ListItemsForUser(user.ID, limit, offset)` → pass the rows to the template. Before passing, **validate each `image_url`**: blank it unless it starts with `http://`/`https://`, so a bad scheme never reaches `<img src>`. No HTML sanitization needed — the summary is already plain text from the fetcher.
+- [x] Claude writes `home.html`: the card list from spec §8 — each item is an `<a class="card card-{{.SourceType}}" href="{{.Url}}" target="_blank" rel="noopener noreferrer">` with thumbnail (if present), source+date, title, summary. `source_type` drives card styling (play overlay for youtube, badge for podcast).
 
 **Gotchas (security):** the summary renders as an auto-escaped string — do NOT wrap it in `template.HTML`. Validate the `image_url` scheme before emitting `<img>`. Outbound links use `rel="noopener noreferrer"`.
 
-**Done when:** logged in, `/` shows an appealing chronological feed of preview cards; clicking one opens the source in a new tab. **This is the milestone payoff — a working curated card feed.**
+**Done when:** logged in, `/` shows an appealing chronological feed of preview cards; clicking one opens the source in a new tab. **This is the milestone payoff — a working curated card feed.** ✅ *(Rendered into the existing Stillness `feed-item` design — a flat chronological list, text-only. `image_url` is validated in the handler but unused in the template for now; day-dividers (`Days`) and thumbnails are deferred.)*
 
 ### Task 2.6 — Subscriptions page → source model ✅ (added scope)
 
