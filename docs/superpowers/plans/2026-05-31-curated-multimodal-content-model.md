@@ -132,15 +132,16 @@ Decided mid-Phase-2: keep topic search **in v1** (not deferred to v2), alongside
 
 ---
 
-## Phase 3 — Finish the fetcher (rest of original M6)
+## Phase 3 — Manual fetch + fetch state
 
-**Goal:** The catalog fetches on a schedule, concurrently, politely. (Independent of modality.)
+**Goal:** Fetching is **user-triggered**, not a background loop. A Refresh pulls new posts on demand; Read-More pages into the already-stored archive.
 
-- [ ] **3.1 Run-once → ticker loop.** Wrap the `ListFeeds`-and-loop body in a `Run(ctx)` method: fetch once on start, then a `time.Ticker` (30 min prod / 1 min dev via config). `select` on `ticker.C` and `ctx.Done()`. (Spec §7; original plan M6 has the reasoning.)
-- [ ] **3.2 Concurrency.** Fetch feeds in parallel with `golang.org/x/sync/errgroup` + `SetLimit(10)`; per-feed errors are logged and isolated (one bad feed never aborts the tick).
-- [ ] **3.3 Conditional GET.** Send `If-None-Match`/`If-Modified-Since` from stored `etag`/`last_modified`; on `304`, just update `last_fetched_at`. Add the "update feed fetch state" query (write back `last_fetched_at`, `last_fetch_status`, `last_fetch_error`, `etag`, `last_modified`).
+**Decision (mid-Phase-2):** dropped the `time.Ticker` background loop. For a personal app, manual fetch is enough; the only thing that genuinely needs scheduling is the email digest, which a separate cron'd job handles (Phase 5) — *not* a fetch loop. See spec §7.
 
-**Note:** detail these tasks further when you reach them — signatures depend on how Phase 1–2 shake out.
+- [ ] **3.1 Refresh / Read-More.** A `POST /refresh` button that runs the fetch over the user's subscribed feeds, then redirects to `/`. **Read-More is *not* a refetch** — it's pure pagination: bump `OFFSET` on `ListItemsForUser` to read further back into the stored archive (old posts are never deleted; `InsertItem` only inserts).
+- [ ] **3.2 (optional) Fetch-state writeback.** Add an "update feed fetch state" query so each fetch writes `last_fetched_at`/`last_fetch_status`/`last_fetch_error` back to the feed — this turns the subscriptions page's "pending" badge into "ok". Optionally send conditional GETs (`If-None-Match`/`If-Modified-Since` from stored `etag`/`last_modified`, handle `304`) so a refresh doesn't re-download unchanged feeds.
+
+**Deferred (not needed for manual fetch):** the `time.Ticker` loop and `errgroup` concurrency. Revisit only if you later want autonomous background fetching, or if refreshing many feeds gets slow (then parallelize the per-feed fetch).
 
 ---
 
@@ -154,6 +155,20 @@ Decided mid-Phase-2: keep topic search **in v1** (not deferred to v2), alongside
 - [ ] **4.4 (optional) `link` kind** for Reddit/news: a title+source+date card (no guaranteed thumbnail) that links out.
 
 **Note:** detail when reached.
+
+---
+
+## Phase 5 — Resurfacing email digest
+
+**Goal:** A scheduled email that re-surfaces a few items already in the user's feed (a calm "you might've missed these" nudge), plus a "sources you might like" suggestion. It **reads the DB; it does not fetch.**
+
+**Design decisions (keep it dead simple):** no read-state, no `last_visited`, no `item_notifications` dedup. Items are picked **at random** — occasionally re-showing one is fine for a reminder. The real work is the email plumbing, not the selection.
+
+- [ ] **5.1 `ListRandomItemsForUser` query.** `… JOIN user_subscriptions … WHERE u.user_id = $1 ORDER BY random() LIMIT 5`. Samples the *whole* archive server-side (reusing the paginated `ListItemsForUser` would only sample the newest page; shuffling in Go would mean transferring the whole archive). `ORDER BY random()` is fine at this scale.
+- [ ] **5.2 `cmd/notify` binary.** Loop users that have subscriptions → run the query → render an email (HTML + plain-text alternative via `mime/multipart`) → send (provider/SMTP creds in config). "Sources you might like" = catalog rows the user doesn't yet follow — no relevance scoring in v1.
+- [ ] **5.3 Schedule with cron** (e.g. `0 8 * * 1`, Monday 8am) running the run-once `notify` binary. No `time.Ticker`.
+
+**Supersedes** the original spec's M8 "new-items digest + `item_notifications`": the digest now resurfaces existing items *at random* rather than tracking what's new.
 
 ---
 
