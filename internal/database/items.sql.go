@@ -41,3 +41,63 @@ func (q *Queries) InsertItem(ctx context.Context, arg InsertItemParams) error {
 	)
 	return err
 }
+
+const listItemsForUser = `-- name: ListItemsForUser :many
+SELECT i.id, i.title, i.url, i.summary, i.image_url, i.published_at,
+         f.title AS source_title, f.source_type 
+FROM user_subscriptions AS u
+INNER JOIN feeds AS f ON f.id = u.feed_id
+INNER JOIN items AS i ON i.feed_id = f.id
+WHERE u.user_id = $1
+ORDER BY i.fetched_at DESC 
+LIMIT $2 OFFSET $3
+`
+
+type ListItemsForUserParams struct {
+	UserID uuid.UUID
+	Limit  int32
+	Offset int32
+}
+
+type ListItemsForUserRow struct {
+	ID          uuid.UUID
+	Title       string
+	Url         string
+	Summary     sql.NullString
+	ImageUrl    sql.NullString
+	PublishedAt sql.NullTime
+	SourceTitle sql.NullString
+	SourceType  string
+}
+
+func (q *Queries) ListItemsForUser(ctx context.Context, arg ListItemsForUserParams) ([]ListItemsForUserRow, error) {
+	rows, err := q.db.QueryContext(ctx, listItemsForUser, arg.UserID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListItemsForUserRow
+	for rows.Next() {
+		var i ListItemsForUserRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.Url,
+			&i.Summary,
+			&i.ImageUrl,
+			&i.PublishedAt,
+			&i.SourceTitle,
+			&i.SourceType,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
