@@ -13,7 +13,9 @@ import (
 )
 
 const listCatalog = `-- name: ListCatalog :many
-SELECT id, feed_url, title, site_url, etag, last_modified, last_fetched_at, last_fetch_status, last_fetch_error, created_at, source_type, category, description FROM feeds ORDER BY category, title
+SELECT id, feed_url, title, site_url, etag, last_modified, last_fetched_at, last_fetch_status, last_fetch_error, created_at, source_type, category, description, curated FROM feeds 
+WHERE curated = TRUE
+ORDER BY category, title
 `
 
 func (q *Queries) ListCatalog(ctx context.Context) ([]Feed, error) {
@@ -39,6 +41,7 @@ func (q *Queries) ListCatalog(ctx context.Context) ([]Feed, error) {
 			&i.SourceType,
 			&i.Category,
 			&i.Description,
+			&i.Curated,
 		); err != nil {
 			return nil, err
 		}
@@ -54,7 +57,7 @@ func (q *Queries) ListCatalog(ctx context.Context) ([]Feed, error) {
 }
 
 const listFeeds = `-- name: ListFeeds :many
-SELECT id, feed_url, title, site_url, etag, last_modified, last_fetched_at, last_fetch_status, last_fetch_error, created_at, source_type, category, description FROM feeds
+SELECT id, feed_url, title, site_url, etag, last_modified, last_fetched_at, last_fetch_status, last_fetch_error, created_at, source_type, category, description, curated FROM feeds
 `
 
 func (q *Queries) ListFeeds(ctx context.Context) ([]Feed, error) {
@@ -80,6 +83,7 @@ func (q *Queries) ListFeeds(ctx context.Context) ([]Feed, error) {
 			&i.SourceType,
 			&i.Category,
 			&i.Description,
+			&i.Curated,
 		); err != nil {
 			return nil, err
 		}
@@ -122,12 +126,12 @@ func (q *Queries) ListFollowedFeedIDs(ctx context.Context, userID uuid.UUID) ([]
 }
 
 const upsertFeed = `-- name: UpsertFeed :one
-INSERT INTO feeds(id, feed_url, title, site_url)
-VALUES(gen_random_uuid(), $1, $2, $3)
+INSERT INTO feeds(id, feed_url, title, site_url, curated)
+VALUES(gen_random_uuid(), $1, $2, $3, FALSE)
 ON CONFLICT (feed_url) DO UPDATE
 SET title = EXCLUDED.title,
     site_url = EXCLUDED.site_url
-RETURNING id, feed_url, title, site_url, etag, last_modified, last_fetched_at, last_fetch_status, last_fetch_error, created_at, source_type, category, description
+RETURNING id, feed_url, title, site_url, etag, last_modified, last_fetched_at, last_fetch_status, last_fetch_error, created_at, source_type, category, description, curated
 `
 
 type UpsertFeedParams struct {
@@ -153,6 +157,7 @@ func (q *Queries) UpsertFeed(ctx context.Context, arg UpsertFeedParams) (Feed, e
 		&i.SourceType,
 		&i.Category,
 		&i.Description,
+		&i.Curated,
 	)
 	return i, err
 }

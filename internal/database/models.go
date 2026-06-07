@@ -33,6 +33,7 @@ type Feed struct {
 	SourceType      string
 	Category        sql.NullString
 	Description     sql.NullString
+	Curated         bool
 }
 
 type Item struct {

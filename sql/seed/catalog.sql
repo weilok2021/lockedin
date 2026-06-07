@@ -1,14 +1,15 @@
-INSERT INTO feeds (id, feed_url, title, site_url, source_type, category, description)
+INSERT INTO feeds (id, feed_url, title, site_url, source_type, category, description, curated)
   VALUES
     (gen_random_uuid(), 'https://jvns.ca/atom.xml', 'Julia Evans',
      'https://jvns.ca', 'article', 'Engineering',
-     'Approachable deep-dives on systems, debugging, and how computers work.'),
+     'Approachable deep-dives on systems, debugging, and how computers work.', TRUE),
     (gen_random_uuid(), 'https://simonwillison.net/atom/everything/', 'Simon Willison',
      'https://simonwillison.net', 'article', 'AI',
-     'LLM/AI experiments, tools, and notes.')
+     'LLM/AI experiments, tools, and notes.', TRUE)
   ON CONFLICT (feed_url) DO UPDATE
   SET title       = EXCLUDED.title,
       site_url    = EXCLUDED.site_url,
       source_type = EXCLUDED.source_type,
       category    = EXCLUDED.category,
-      description = EXCLUDED.description;
+      description = EXCLUDED.description,
+      curated = TRUE;
