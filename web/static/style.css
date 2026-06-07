@@ -977,3 +977,123 @@ a:hover { text-decoration: underline; }
     .lp-fan { height: 280px; }
     .lp-mini { width: 200px; }
 }
+
+/* ===== DISCOVER — summon a community from the catalog ==================== */
+
+.discover {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1rem 2rem;
+    background: var(--glass);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--hair);
+    border-radius: var(--r);
+    box-shadow: var(--shadow-sm);
+    padding: 1.3rem 1.5rem 1.1rem;
+    margin-bottom: 2.2rem;
+    overflow: hidden;
+}
+/* rainbow crown: every source type — this is where new sources enter */
+.discover::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 4px;
+    background: var(--g-rainbow);
+}
+
+.discover-title {
+    font-family: var(--font-display);
+    font-size: 1.05rem;
+    font-weight: 700;
+}
+.discover-sub {
+    color: var(--sub);
+    font-size: 0.85rem;
+    margin-top: 0.15rem;
+}
+
+.discover-form {
+    flex: 1;
+    min-width: 280px;
+    display: flex;
+    gap: 0.6rem;
+}
+/* pill field, echoing the button radius — same family as .form-input
+   (field bg + blue focus ring) but built for the inline bar */
+.discover-field {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    background: var(--field);
+    border: 1.5px solid transparent;
+    border-radius: 99px;
+    padding: 0 0.3rem 0 1rem;
+    transition: border-color var(--t), box-shadow var(--t);
+}
+.discover-field:focus-within {
+    border-color: var(--blue);
+    box-shadow: 0 0 0 4px rgba(45, 91, 255, 0.15);
+}
+.discover-prefix {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--violet);
+}
+.discover-input {
+    flex: 1;
+    min-width: 0;
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+    color: var(--ink);
+    background: transparent;
+    border: none;
+    padding: 0.65rem 0.5rem;
+}
+.discover-input:focus { outline: none; }
+.discover-input::placeholder { color: var(--sub); opacity: 0.7; }
+
+.discover-try {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+}
+.discover-try form { display: contents; }
+.discover-try-label {
+    font-size: 0.64rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--sub);
+}
+.chip-try {
+    font-family: var(--font-body);
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--sub);
+    background: rgba(90, 107, 140, 0.10);
+    border: 1px solid transparent;
+    border-radius: 99px;
+    padding: 4px 12px;
+    cursor: pointer;
+    transition: transform var(--t), color var(--t), background var(--t), border-color var(--t);
+}
+.chip-try:hover {
+    color: var(--blue);
+    background: rgba(45, 91, 255, 0.10);
+    border-color: rgba(45, 91, 255, 0.35);
+    transform: translateY(-1px);
+}
+.chip-try:active { transform: translateY(0) scale(0.97); }
+
+@media (max-width: 640px) {
+    .discover { gap: 0.9rem; }
+    .discover-form { flex-direction: column; min-width: 0; }
+    .discover-form .btn { width: 100%; }
+}

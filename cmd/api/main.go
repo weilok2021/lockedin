@@ -18,6 +18,8 @@ import (
 	"github.com/weilok2021/lockedin/internal/auth"
 	"github.com/weilok2021/lockedin/internal/config"
 	"github.com/weilok2021/lockedin/internal/database"
+	"github.com/weilok2021/lockedin/internal/feeds"
+	"github.com/weilok2021/lockedin/internal/fetcher"
 )
 
 type App struct {
@@ -122,6 +124,9 @@ func main() {
 	// catalogs
 	mux.HandleFunc("GET /catalog", app.middlewareAuthorization(app.handlerBrowseCatalog))
 
+	// search topic/discover
+	mux.HandleFunc("POST /discover", app.middlewareAuthorization(app.handlerDiscoverTopic))
+
 	if cfg.Environment == "development" {
 		mux.HandleFunc("POST /dev/reset", app.handlerDevReset)
 	}
@@ -172,6 +177,10 @@ func (a *App) userFromSession(r *http.Request) (database.User, bool) {
 	return user, true
 }
 
+// handlerHome renders the reading feed: a paginated list (20 per page) of
+// items from the sources the logged-in user follows, newest first. It reads
+// ?page from the query, clamping out-of-range values into [1, totalPages].
+// Reached via handlerRoot ("GET /") when a valid session exists.
 func (a *App) handlerHome(w http.ResponseWriter, r *http.Request) {
 	user := r.Context().Value(userContextKey).(database.User)
 	const pageSize = 20
@@ -207,8 +216,6 @@ func (a *App) handlerHome(w http.ResponseWriter, r *http.Request) {
 		responseWithError(w, http.StatusInternalServerError, "Could not load your feed", err)
 		return
 	}
-
-	// (keep your existing image-URL sanitize loop here)
 
 	// 3. Build the clickable page numbers [1..totalPages].
 	pageNumbers := make([]int, totalPages)
@@ -578,6 +585,45 @@ func (a *App) handlerBrowseCatalog(w http.ResponseWriter, r *http.Request) {
 		Message: r.URL.Query().Get("msg"),
 		Catalog: catalogs,
 	})
+}
+
+func (a *App) handlerDiscoverTopic(w http.ResponseWriter, r *http.Request) {
+	topic := r.FormValue("topic")
+	user := r.Context().Value(userContextKey).(database.User)
+
+	feedURL, _, err := feeds.FeedURLForTopic(topic)
+	if err != nil {
+		http.Redirect(w, r, "/catalog?msg=invalid", http.StatusSeeOther)
+		return
+	}
+
+	fetchedFeed, err := fetcher.FetchFeed(r.Context(), feedURL)
+	if err != nil {
+		http.Redirect(w, r, "/catalog?msg=invalid", http.StatusSeeOther)
+		return
+	}
+	dbFeed, err := a.queries.UpsertFeed(r.Context(), database.UpsertFeedParams{
+		FeedUrl: feedURL,
+		Title:   sql.NullString{String: fetchedFeed.Title, Valid: fetchedFeed.Title != ""},
+		SiteUrl: sql.NullString{String: fetchedFeed.Link, Valid: fetchedFeed.Link != ""},
+	})
+	if err != nil {
+		responseWithError(w, http.StatusInternalServerError, "Could not save subscription", err)
+		return
+	}
+
+	if err := a.queries.CreateUserSubscription(r.Context(), database.CreateUserSubscriptionParams{
+		UserID:      user.ID,
+		FeedID:      dbFeed.ID,
+		CustomTitle: sql.NullString{String: topic, Valid: true},
+	}); err != nil {
+		responseWithError(w, http.StatusInternalServerError, "Could not save subscription", err)
+		return
+	}
+
+	fetcher.StoreFeedItems(r.Context(), a.queries, fetchedFeed, dbFeed.ID)
+
+	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
 // helper function to sends json response
