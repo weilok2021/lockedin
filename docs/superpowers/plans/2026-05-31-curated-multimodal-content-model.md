@@ -126,8 +126,11 @@ Not in the original plan, but required once follows became `feed_id`-based: the 
 
 Decided mid-Phase-2: keep topic search **in v1** (not deferred to v2), alongside the curated catalog.
 
-- [ ] Migration: add `curated boolean NOT NULL DEFAULT false` to `feeds`; the seed sets it `true`; `ListCatalog` filters `WHERE curated = true` so ad-hoc topic feeds don't pollute the browse list.
-- [ ] Second handler/route (e.g. `POST /discover` with a `topic`): restore the commented topic flow — `FeedURLForTopic` → gofeed validate → `UpsertFeed` (`curated=false`) → `CreateUserSubscription`.
+- [x] Migration: add `curated boolean NOT NULL DEFAULT false` to `feeds`; the seed sets it `true` (on both insert and conflict-update paths); `ListCatalog` filters `WHERE curated = true` so ad-hoc topic feeds don't pollute the browse list. `UpsertFeed` hardcodes `curated = false` and never touches it on conflict — promotion is the seed's job alone, so a user discover can't demote a catalog entry.
+- [x] `POST /discover` (auth-wrapped): `FeedURLForTopic` → fetch/validate → `UpsertFeed` (`curated=false`) → `CreateUserSubscription` (`custom_title` = the typed topic) → store items from the validation parse, so the user lands on `/` with posts already there (one HTTP fetch total). **Deviations from the original sketch:**
+  - Provider maps topic → **subreddit RSS** (`reddit.com/r/<topic>/.rss`, lowercased + space-stripped), not Google News — dropped after live research (2026-06-07): redirect links + headline-only text vs Reddit's full post bodies across all target domains (stocks/tech/dev/self-improvement). **Fallback if the VPS gets IP-blocked by Reddit: dev.to tag feeds** (same provider shape, one-line swap). HN frontpage RSS is a curated-catalog candidate, not a discover provider (no topic param).
+  - Fetch + ingest extracted into **`internal/fetcher`** (`FetchFeed`, `StoreFeedItems`), shared by the fetcher binary (now a thin shell) and the discover handler.
+  - Catalog page gained the **"Summon bar"** — glassy pill input with `r/` prefix + zero-JS try-chips (`r/golang`, `r/investing`, `r/selfimprovement`), rainbow-crowned per Bento Pop.
 - [ ] Mark topic results as "Discover" (unvetted) in the UI, distinct from curated sources.
 
 ---
