@@ -1,6 +1,6 @@
 # Lockedin — Curated multi-modal content model (implementation plan)
 
-**Companion spec:** `docs/superpowers/specs/2026-05-31-curated-multimodal-content-model-design.md`
+**Companion spec:** `docs/superpowers/specs/2026-06-07-lockedin-v1-design.md` (consolidated; absorbs the original `2026-05-31-…-design.md` — see its Appendix A for the section map)
 **Status:** Active
 **Tracked:** Lives in the repo, kept in sync with the implementation.
 
@@ -8,9 +8,9 @@
 
 ## How to read this plan
 
-Same convention as `2026-05-16-low-noise-aggregator-implementation.md`: **mentor-style, no code bodies.** You implement the backend Go; this tells you what to build, in what order, what "done" looks like, and where to be careful. Claude authors the things already delegated — SQL migrations/queries (shapes are in the spec §4–8), test code, HTML templates, CSS — and reviews each step you write.
+Same convention as `2026-05-16-low-noise-aggregator-implementation.md`: **mentor-style, no code bodies.** You implement the backend Go; this tells you what to build, in what order, what "done" looks like, and where to be careful. Claude authors the things already delegated — SQL migrations/queries (shapes are in the spec §5–6), test code, HTML templates, CSS — and reviews each step you write.
 
-**Relationship to the original plan:** this supersedes the *topic→Google-News* half of **Milestone 5**, reshapes **Milestone 6 (fetcher)** to carry the schema/catalog/`source_type` work, and replaces **Milestone 7 (web UI)** with the catalog + blended-reader described here. The original plan's M0–M4, M8 (notifications), M9 (tests), M10 (deploy) still stand.
+**Relationship to the original plan:** this is now the **single active plan**. It superseded the *topic→Google-News* half of **Milestone 5**, reshaped **Milestone 6 (fetcher)** to carry the schema/catalog/`source_type` work, replaced **Milestone 7 (web UI)** with the catalog + blended-reader, and superseded **Milestone 8 (notifications)** with the Phase 5 digest. The original plan's remaining open work — **M9 (tests)** and **M10 (deploy)** — is carried here as **Phases 6–7**; the original plan itself is historical (the M0–M8 record).
 
 **Order matters.** Phase 1 → 2 give a working curated *article* reader. Phases 3–4 are additive (no rework). Don't start Phase 4 (other modalities) before Phase 2 proves the pipeline.
 
@@ -26,7 +26,7 @@ Same convention as `2026-05-16-low-noise-aggregator-implementation.md`: **mentor
 
 **Files:** Create `sql/schema/000008_multimodal_columns.sql` (goose format).
 
-- [x] Write the `+goose Up`: on `feeds`, add `source_type text NOT NULL DEFAULT 'article' CHECK (source_type IN ('article','youtube','podcast'))`, plus nullable `category text` and `description text`. On `items`, **rename `content` → `summary`** (it's the card blurb now, not a full body) and add nullable `image_url text` (the card thumbnail). (Rationale: spec §4. `media_url`/`media_type` playback fields are deferred — not in this migration.)
+- [x] Write the `+goose Up`: on `feeds`, add `source_type text NOT NULL DEFAULT 'article' CHECK (source_type IN ('article','youtube','podcast'))`, plus nullable `category text` and `description text`. On `items`, **rename `content` → `summary`** (it's the card blurb now, not a full body) and add nullable `image_url text` (the card thumbnail). (Rationale: spec §5.2. `media_url`/`media_type` playback fields are deferred — not in this migration.)
 - [x] Write the matching `+goose Down` (reverse order): drop `items.image_url`, rename `summary` back to `content`, then drop the three `feeds` columns. *(Note: in Postgres a `RENAME COLUMN` can't be combined with `ADD`/`DROP` in one `ALTER` — make it its own statement.)*
 - [x] Run `goose -dir sql/schema postgres "$DB_URL" up`.
 - [x] Verify with `psql "$DB_URL" -c "\d feeds"` and `\d items` — confirm the columns and the CHECK constraint exist.
@@ -56,7 +56,7 @@ Same convention as `2026-05-16-low-noise-aggregator-implementation.md`: **mentor
 
 ### Task 1.4 — Fetch and confirm the card fields
 
-**Files:** `cmd/fetcher/main.go` — extend the item mapping to populate the summary (strip tags from `item.Description`) and `image_url` (spec §7 extraction order). *(The one bit of fetcher code Phase 1 touches — you implement, I review.)*
+**Files:** `cmd/fetcher/main.go` — extend the item mapping to populate the summary (strip tags from `item.Description`) and `image_url` (spec §6.1 extraction order). *(The one bit of fetcher code Phase 1 touches — you implement, I review.)*
 
 - [x] `go run ./cmd/fetcher`.
 - [x] Verify the card fields: `psql "$DB_URL" -c "SELECT count(*) AS total, count(image_url) AS with_thumb, count(summary) AS with_summary FROM items;"`.
@@ -98,7 +98,7 @@ Same convention as `2026-05-16-low-noise-aggregator-implementation.md`: **mentor
 
 ### Task 2.4 — `ListItemsForUser` query ✅
 
-**Files:** Modify `sql/queries/items.sql` (Claude provides; shape in spec §8).
+**Files:** Modify `sql/queries/items.sql` (Claude provides; shape in spec §6.4).
 
 - [x] Add `ListItemsForUser :many` (items INNER JOIN subscriptions INNER JOIN feeds, newest-first, `LIMIT/OFFSET`). `sqlc generate`.
 - [x] Confirm the row type carries `SourceTitle`, `SourceType`, `ImageUrl`, and `Summary`.
@@ -108,7 +108,7 @@ Same convention as `2026-05-16-low-noise-aggregator-implementation.md`: **mentor
 **Files:** Modify `cmd/api/main.go` (`handlerHome` / `GET /`). Claude writes/updates `web/templates/home.html` + CSS. **No `bluemonday`** — summarys are plain text.
 
 - [x] **Contract (you implement):** `GET /` when logged in → `ListItemsForUser(user.ID, limit, offset)` → pass the rows to the template. Before passing, **validate each `image_url`**: blank it unless it starts with `http://`/`https://`, so a bad scheme never reaches `<img src>`. No HTML sanitization needed — the summary is already plain text from the fetcher.
-- [x] Claude writes `home.html`: the card list from spec §8 — each item is an `<a class="card card-{{.SourceType}}" href="{{.Url}}" target="_blank" rel="noopener noreferrer">` with thumbnail (if present), source+date, title, summary. `source_type` drives card styling (play overlay for youtube, badge for podcast).
+- [x] Claude writes `home.html`: the card list from spec §6.4 — each item is an `<a class="card card-{{.SourceType}}" href="{{.Url}}" target="_blank" rel="noopener noreferrer">` with thumbnail (if present), source+date, title, summary. `source_type` drives card styling (play overlay for youtube, badge for podcast).
 
 **Gotchas (security):** the summary renders as an auto-escaped string — do NOT wrap it in `template.HTML`. Validate the `image_url` scheme before emitting `<img>`. Outbound links use `rel="noopener noreferrer"`.
 
@@ -136,7 +136,7 @@ Decided mid-Phase-2: keep topic search **in v1** (not deferred to v2), alongside
 
 **Goal:** Fetching is **user-triggered**, not a background loop. A Refresh pulls new posts on demand; numbered pages read back into the already-stored archive.
 
-**Decision (mid-Phase-2):** dropped the `time.Ticker` background loop. For a personal app, manual fetch is enough; the only thing that genuinely needs scheduling is the email digest, which a separate cron'd job handles (Phase 5) — *not* a fetch loop. See spec §7.
+**Decision (mid-Phase-2):** dropped the `time.Ticker` background loop. For a personal app, manual fetch is enough; the only thing that genuinely needs scheduling is the email digest, which a separate cron'd job handles (Phase 5) — *not* a fetch loop. See spec §6.1.
 
 - [x] **3.1 Numbered pagination on the reading feed.** Server-rendered numbered pages over the stored archive — *not* a refetch (old posts are never deleted; `InsertItem` only inserts). A `CountItemsForUser` query returns the total; the handler derives page count, the `X–Y of Z` range, and prev/next purely by arithmetic; `ListItemsForUser` fetches one page via `LIMIT pageSize OFFSET (page-1)*pageSize`. No JavaScript — every control is an `<a href="/?page=N">`. Chose numbered pages over Read-More/Load-More for clearer orientation ("Page N of M", "items X–Y of Z"). Walkthrough: `docs/pagination-walkthrough.md`.
 - [ ] **3.2 Refresh button.** A `POST /refresh` that runs the fetch over the user's subscribed feeds, then redirects to `/`.
@@ -150,7 +150,7 @@ Decided mid-Phase-2: keep topic search **in v1** (not deferred to v2), alongside
 
 **Goal:** YouTube then podcast, each = a thumbnail/summary extraction tweak + card styling + seed rows. No rework of Phase 1–3 — everything still links out.
 
-- [ ] **4.1 Generalize the `itemParams(feed, item)` mapper** (spec §7): move the article mapping into a `switch feed.SourceType` so per-kind thumbnail/summary extraction slots in.
+- [ ] **4.1 Generalize the `itemParams(feed, item)` mapper** (spec §6.1): move the article mapping into a `switch feed.SourceType` so per-kind thumbnail/summary extraction slots in.
 - [ ] **4.2 YouTube.** Mapper `case "youtube"`: prefer `media:thumbnail` for `image_url`, summary from `media:description`; the card links out to `item.Link` (the watch URL). Card styling: a play-triangle over the 16:9 thumbnail. Seed channels (`youtube.com/feeds/videos.xml?channel_id=…`). Verify cards show a thumbnail + play overlay and open YouTube.
 - [ ] **4.3 Podcast.** Mapper `case "podcast"`: `image_url` from `itunes:image`/feed artwork, summary from show notes; the card links out to the episode page (`item.Link`). Card styling: a "Listen" badge. Seed shows (Apple search API → feed URLs). Verify cards show artwork + badge.
 - [ ] **4.4 (optional) `link` kind** for Reddit/news: a title+source+date card (no guaranteed thumbnail) that links out.
@@ -173,7 +173,46 @@ Decided mid-Phase-2: keep topic search **in v1** (not deferred to v2), alongside
 
 ---
 
-## Testing (per spec §9, woven through the phases)
+## Phase 6 — Test pass *(ported from the original plan's M9)*
+
+**Goal:** every Tier 1 test from spec §10.1 exists, passes reliably, and runs in CI-ready isolation.
+
+**Done when:**
+- [ ] `go test ./...` passes.
+- [ ] `go test -race ./...` passes.
+- [ ] The spec §10.1 Tier 1 table is fully covered — the "Testing" section below tracks the content-model slice; this phase fills the rest (auth, sessions, dedupe, idempotency).
+- [ ] Integration tests run against a real Postgres, isolated via transaction rollback.
+- [ ] A single `make test` runs everything.
+
+**Tooling:** `testing` + `stretchr/testify/require`; `net/http/httptest` for handlers; Postgres via **(A)** `testcontainers-go` (zero local setup, ~2–5s startup) or **(B)** a dedicated `lockedin_test` DB (faster, manual setup).
+
+**Key considerations:**
+- **Rollback isolation, stdlib flavor:** sqlc's generated `Queries` accept the `DBTX` interface, and `*sql.Tx` satisfies it — begin a transaction in test setup, hand `database.New(tx)` to the test, `defer tx.Rollback()`. Test data never persists. *(The original M9 sketch used pgx's `pool.Begin`; this project is `database/sql` + `lib/pq`.)*
+- **Fixture helpers** (`seedUser(t, q)` etc.) instead of copy-pasted setup boilerplate.
+- **No timing-based tests.** A `time.Sleep` in a test is a redesign signal.
+- **End-to-end smoke (updated for the current model):** seed two users + a catalog source backed by a fake feed (`httptest.NewServer` serving static RSS); follow it as user A; run a fetch; verify items landed once (dedupe), user A's feed shows them, user B's doesn't (isolation), and a second fetch run inserts nothing new (idempotency).
+
+---
+
+## Phase 7 — Containerize + deploy *(ported from the original plan's M10)*
+
+**Goal:** the app runs on a real, internet-reachable server via HTTPS, and you've used it from a phone.
+
+**Done when:**
+- [ ] Multi-stage Dockerfiles per binary (`api`, `fetcher`, later `notify`) → tiny static images (`CGO_ENABLED=0`).
+- [ ] `docker-compose.yml` runs `postgres` + `api` (+ Caddy). `fetcher`/`notify` are **run-once invocations** (`docker compose run fetcher`, or host cron) — not long-running services.
+- [ ] Caddy terminates HTTPS via Let's Encrypt.
+- [ ] `.env` lives on the server (gitignored); `.env.example` in the repo documents what's needed.
+- [ ] Daily `pg_dump | gzip` backup cron on the host; keep 7 days.
+- [ ] Smoke test from your phone on the deployed instance: sign up → verify → browse the catalog → follow a source → refresh → read a few link-out cards → (once Phase 5 ships) receive the Monday digest.
+
+**Spec reference:** §11 — the fixed packaging decisions; §11.2's hosting/email/domain research is finalized at the start of this phase. The original plan's M10 section keeps the worked `docker-compose.yml`/`Caddyfile` snippets — consult it when you get here.
+
+**This is the phase where the spec stops being a spec and becomes a thing you actually use. Celebrate it.**
+
+---
+
+## Testing (per spec §10, woven through the phases)
 
 - [ ] **Mapper unit tests** (`topic_test.go` style): guid-fallback, summary tag-stripping, thumbnail field-preference per `source_type`, nullable handling.
 - [ ] **Summary/image safety test** (Phase 1.4 / 2.5): the summary has no markup after mapping; an `image_url` with a non-`http(s)` scheme is rejected/blanked.
@@ -184,5 +223,5 @@ Decided mid-Phase-2: keep topic search **in v1** (not deferred to v2), alongside
 
 ## Self-review notes (coverage vs spec)
 
-- Spec §2 thesis correction → reflected in memory + spec banner (no code task).
-- Spec §4 schema (source_type, category, description, image_url) → Task 1.1. §5 catalog/seed → 1.3. §6 browse/follow → 2.1–2.3. §7 fetcher summary/thumbnail mapping → 1.4 (generalized in 4.1; Phase 3 loop/concurrency). §8 card rendering → 2.4–2.5. §9 testing → Testing section. §10 sequence → Phase order. §11 out-of-scope (in-app playback, OG-unfurl, scraping) → not planned (correct).
+- Spec §1.3 thesis correction → reflected in memory + spec (no code task).
+- Spec §5.2 schema (source_type, category, description, image_url) → Task 1.1. §5.4 catalog/seed → 1.3. §6.4 browse/follow → 2.1–2.3. §6.1 fetcher summary/thumbnail mapping → 1.4 (generalized in 4.1). §6.4 card rendering → 2.4–2.5. §10 testing → Testing section. §3/§12 out-of-scope (in-app playback, OG-unfurl, scraping) → not planned (correct).

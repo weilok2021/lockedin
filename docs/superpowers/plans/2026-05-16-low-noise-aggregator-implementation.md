@@ -1,10 +1,10 @@
 # Lockedin — v1 implementation plan (mentor-style)
 
-**Companion spec:** `docs/superpowers/specs/2026-05-16-low-noise-aggregator-design.md`
-**Status:** Active
+**Companion spec:** `docs/superpowers/specs/2026-06-07-lockedin-v1-design.md` (consolidated; section numbering matches the original `2026-05-16-…-design.md`, so the `§` references below still resolve)
+**Status:** Historical — the record of M0–M8. The single active plan is `2026-05-31-curated-multimodal-content-model.md` (M9 → its Phase 6, M10 → its Phase 7).
 **Tracked:** This document lives in the repo and is kept in sync with the implementation.
 
-> **⚠ Milestones 5–7 are restructured by [`2026-05-31-curated-multimodal-content-model.md`](2026-05-31-curated-multimodal-content-model.md).** The content model moved from topic→Google-News to a curated, multi-modal catalog (see the design doc dated 2026-05-31). The topic half of M5 retires, M6 carries the new schema/catalog/`source_type` work, and M7 becomes the catalog + blended reader. M0–M4, M8 (notifications), M9 (tests), and M10 (deploy) below are unchanged — follow them as written.
+> **⚠ This plan is historical.** All live work moved to [`2026-05-31-curated-multimodal-content-model.md`](2026-05-31-curated-multimodal-content-model.md). The content model moved from topic→Google-News to a curated, multi-modal catalog (see the consolidated design doc, §1.2): the topic half of M5 retired, M6 carried the new schema/catalog/`source_type` work, M7 became the catalog + blended reader, M8's new-item digest was superseded by the random resurfacing digest (newer plan, Phase 5), and the still-open M9 (tests) / M10 (deploy) are ported there as Phases 6–7. Keep this doc for the M0–M8 record and the worked M10 deploy snippets (compose/Caddyfile), which Phase 7 references.
 
 ---
 
@@ -660,7 +660,7 @@ These came up during design discussions but aren't milestone work. Keep them in 
 - Rate-limiting login attempts (flagged in spec §7).
 - Post-password-change security notification email (spec §14).
 - OPML import/export (spec §14).
-- Pagination on the feed view.
+- ~~Pagination on the feed view~~ — done 2026-06-07 (server-rendered numbered pages; see `docs/pagination-walkthrough.md`).
 - Per-feed fetch intervals.
 - AWS deployment migration.
 - LLM summarization and relevance scoring.
