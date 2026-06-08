@@ -626,6 +626,17 @@ func (a *App) handlerDiscoverTopic(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
+func (a *App) handlerShowMoreItems(w http.ResponseWriter, r *http.Request) {
+	//   1. InsertItem → :execrows so it returns rows-affected (1 = inserted, 0 = deduped), then sqlc generate.
+	//   2. ListSubscribedFeeds query → returns id + feed_url for the user's followed feeds (the fetch loop's input; ListUserSubscriptions omits feed_url).
+	//   3. StoreFeedItems → change to return (int, error), summing the new-insert counts. (The two existing callers discard the return, so they keep compiling.)
+	//   4. handlerRefresh (rename your boilerplate) → ListSubscribedFeeds → per feed FetchFeed + StoreFeedItems with per-feed log-and-continue → redirect to
+	//   /?fetched=<total> (303).
+	//   5. Route → POST /refresh behind middlewareAuthorization.
+	//   6. handlerHome → read ?fetched (use r.URL.Query().Has("fetched") to tell "no fetch" from "0 new") and pass it into PageData.
+	return
+}
+
 // helper function to sends json response
 func responseWithJson(w http.ResponseWriter, status int, payload interface{}) {
 	w.Header().Set("Content-Type", "application/json")
