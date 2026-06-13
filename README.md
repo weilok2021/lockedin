@@ -17,29 +17,27 @@ out to the original site. No algorithm, no infinite scroll, no junk.
 
 <!--
   Personalize this section in your own voice before sharing. Drop in the real
-  story: which 1–2 sources you actually love (a specific blog/channel/podcast),
-  and the moment you got fed up enough to build this.
+  story: the one or two sources you actually love (a specific blog, channel, or
+  podcast), and the moment you got fed up enough to build this.
 -->
 
-You know the move: you grab your phone to read *one* article, and an hour later
-you've got nothing to show for it. That's not an accident. The feeds we live in
-are tuned to keep you scrolling, not to get you the handful of things you came
-for.
+I built LockedIn because the sources I actually wanted to follow were spread
+across a bunch of different platforms. A blog on one site, a YouTube channel on
+another. Keeping up with them meant opening apps whose whole job is to keep me
+there, and their algorithms are really good at it. I'd go in to read one thing,
+get pulled somewhere else, and lose half an hour to a doom scroll with nothing to
+show for it.
 
-I wanted to stay current on a few sources I genuinely trust — engineering blogs,
-a couple of writers, the occasional channel — without wading through everything
-the platforms wrap around them. So I built a front door for exactly those
-sources and nothing else.
+All I really wanted was a handful of sources I trust, like a good engineering
+blog and a writer whose posts I never skip, in one calm place. So I built a small
+front door that shows me exactly those and leaves the rest out.
 
-The thing I kept coming back to: the problem isn't engagement. Engagement is
-fine when it's pointed at something worth your time. The problem is *noise* —
-uncurated, low-quality stuff competing for the same attention. So LockedIn's job
-is curation. You pick the sources, it gives you a clean shelf of what's new, and
-when you reach the bottom it just says "that's the whole shelf" and lets you put
-the phone down.
-
-It's also my capstone for the Boot.dev backend track, so it leans on the stack I
-wanted to practice: Go, Postgres, and (soon) Docker.
+The part I actually care about: engagement was never the enemy. An app being fun
+to use is great when it points you at something worth your time. What wears me
+down is the noise around it, all the low effort filler fighting for the same
+attention. So that is what LockedIn cuts. You pick the sources, it shows you what
+is new, and once you hit the bottom it just says "that's the whole shelf" so you
+can go get on with your day.
 
 ## What it is
 
@@ -48,8 +46,8 @@ LockedIn is a server-rendered Go web app. The shape of it:
 - **A curated catalog.** The app owns a small, hand-picked list of trusted
   sources. You browse it and follow individual ones (like subscribing to a
   channel). You never paste in feed URLs.
-- **A reading feed of link-out cards.** Each item is a preview card — title,
-  source, short summary, thumbnail — that opens the original site to
+- **A reading feed of link-out cards.** Each item is a preview card (title,
+  source, short summary, thumbnail) that opens the original site to
   read/watch/listen. Nothing gets republished in-app, which keeps it clear of
   copyright and free-tier headaches and keeps the app a *front door*, not a
   copy.
@@ -61,7 +59,7 @@ LockedIn is a server-rendered Go web app. The shape of it:
 - **Accounts.** Email + password signup with email verification, and
   cookie-based sessions.
 
-It's multi-modal by design — the schema already distinguishes `article`,
+It's multi-modal by design. The schema already distinguishes `article`,
 `youtube`, and `podcast` source types so card styling and thumbnails can adapt
 per kind. v1 implements `article` first; the other two are additive.
 
@@ -116,7 +114,7 @@ per kind. v1 implements `article` first; the other two are additive.
 ## Tech stack
 
 - **Language:** Go (1.25+)
-- **HTTP:** `net/http` standard library routing — no framework
+- **HTTP:** `net/http` standard library routing (no framework)
 - **Templates:** `html/template`, server-side rendered
 - **Database:** PostgreSQL via `database/sql` + [`lib/pq`](https://github.com/lib/pq) (not pgx)
 - **Queries:** [`sqlc`](https://sqlc.dev) generates type-safe Go from SQL
@@ -140,7 +138,7 @@ Still on the roadmap:
 
 - ⏳ Real email sending (verification links are logged to the console in dev)
 - ⏳ Password reset (designed, not built)
-- ⏳ Resurfacing email digest — an occasional "you might've missed these" nudge
+- ⏳ Resurfacing email digest: an occasional "you might've missed these" nudge
 - ⏳ YouTube and podcast modalities (schema is ready; `article` is built first)
 - ⏳ Deployment (planned: Docker Compose on a single VPS)
 
@@ -150,8 +148,8 @@ Still on the roadmap:
 
 - [Go](https://go.dev/dl/) 1.25 or newer
 - [PostgreSQL](https://www.postgresql.org/)
-- [`goose`](https://github.com/pressly/goose#install) — database migrations
-- [`sqlc`](https://docs.sqlc.dev/en/latest/overview/install.html) — only needed if you edit the SQL queries
+- [`goose`](https://github.com/pressly/goose#install) for database migrations
+- [`sqlc`](https://docs.sqlc.dev/en/latest/overview/install.html), only needed if you edit the SQL queries
 
 ### 1. Clone and grab dependencies
 
@@ -176,7 +174,7 @@ cp .env.example .env
 ```
 
 Then edit `.env` and set `DB_URL` (and a password). The defaults run the app on
-port `8080` in development mode. `.env` is gitignored — never commit real
+port `8080` in development mode. `.env` is gitignored, so never commit real
 secrets.
 
 ### 4. Run the migrations
@@ -207,7 +205,7 @@ The fetcher reads every feed in the database and stores the latest items.
 ### 7. Run the server
 
 ```bash
-go run ./cmd/api    # run from the project root — templates use relative paths
+go run ./cmd/api    # run from the project root, templates use relative paths
 ```
 
 Open <http://localhost:8080>.
@@ -215,11 +213,11 @@ Open <http://localhost:8080>.
 ### Using it
 
 1. Sign up at `/signup`. In dev, the verification link is printed to the
-   server's console — open it to verify your email.
+   server's console, so open it to verify your email.
 2. Log in, then visit `/catalog` and follow a source or two.
 3. Run `go run ./cmd/fetcher` again to pull their latest items, then refresh `/`
    to see your feed.
-4. Or hit Discover and follow a Reddit topic — its posts get pulled in
+4. Or hit Discover and follow a Reddit topic, and its posts get pulled in
    immediately, no separate fetch needed.
 
 > **Tip (dev only):** `curl -X POST http://localhost:8080/dev/reset` wipes all
