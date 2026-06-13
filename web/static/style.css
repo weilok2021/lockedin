@@ -980,12 +980,18 @@ a:hover { text-decoration: underline; }
 
 /* ===== DISCOVER — summon a community from the catalog ==================== */
 
+/* anchored grid: copy block spans both rows on the left; the field+button
+   row and the try-chips row share one left edge on the right */
 .discover {
     position: relative;
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-areas:
+        "copy form"
+        "copy try";
+    column-gap: 2.2rem;
+    row-gap: 0.65rem;
     align-items: center;
-    gap: 1rem 2rem;
     background: var(--glass);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
@@ -1005,6 +1011,8 @@ a:hover { text-decoration: underline; }
     background: var(--g-rainbow);
 }
 
+.discover-copy { grid-area: copy; }
+
 .discover-title {
     font-family: var(--font-display);
     font-size: 1.05rem;
@@ -1014,10 +1022,11 @@ a:hover { text-decoration: underline; }
     color: var(--sub);
     font-size: 0.85rem;
     margin-top: 0.15rem;
+    max-width: 17ch; /* wraps after "topic", keeping the copy column compact */
 }
 
 .discover-form {
-    flex: 1;
+    grid-area: form;
     min-width: 280px;
     display: flex;
     gap: 0.6rem;
@@ -1058,7 +1067,7 @@ a:hover { text-decoration: underline; }
 .discover-input::placeholder { color: var(--sub); opacity: 0.7; }
 
 .discover-try {
-    width: 100%;
+    grid-area: try;
     display: flex;
     align-items: center;
     flex-wrap: wrap;
@@ -1093,7 +1102,11 @@ a:hover { text-decoration: underline; }
 .chip-try:active { transform: translateY(0) scale(0.97); }
 
 @media (max-width: 640px) {
-    .discover { gap: 0.9rem; }
+    .discover {
+        grid-template-columns: 1fr;
+        grid-template-areas: "copy" "form" "try";
+        row-gap: 0.9rem;
+    }
     .discover-form { flex-direction: column; min-width: 0; }
     .discover-form .btn { width: 100%; }
 }
